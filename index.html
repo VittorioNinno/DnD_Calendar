@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Session Scheduler</title>
+    <link rel="icon" href="Dnd_Logo.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-color: #e0e0e0;
+            --accent: #ff6a00;
+            --accent-hover: #ff8533;
+            --card-bg: #121212;
+            --free: #d84315;
+            --grid-border: #1f1f1f;
+            --hour-height: 40px;
+            --success: #4caf50;
+            --danger: #d32f2f;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 15px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--accent); margin-bottom: 25px; text-transform: uppercase;
+            letter-spacing: 3px; font-size: 2rem; user-select: none; cursor: pointer;
+            text-shadow: 0px 2px 10px rgba(255, 106, 0, 0.3);
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #2a2a2a;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.9);
+            margin-bottom: 20px;
+        }
+
+        .btn-group {
+            display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 10px;
+        }
+
+        button:not(.copy-icon-btn) {
+            background-color: var(--accent);
+            color: #050505;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        button:not(.copy-icon-btn):hover { background-color: var(--accent-hover); color: #fff; transform: translateY(-1px); }
+        button:not(.copy-icon-btn):disabled { background-color: #333; color: #666; cursor: not-allowed; transform: none; }
+
+        .btn-danger { background-color: #333 !important; color: #aaa !important; border: 1px solid #444 !important; }
+        .btn-danger:hover { background-color: var(--danger) !important; color: #fff !important; border-color: var(--danger) !important; }
+
+        .btn-success { background-color: var(--success) !important; color: #000 !important; }
+        .btn-success:hover { background-color: #66bb6a !important; color: #000 !important; }
+
+        input[type="text"].main-input, textarea.dm-textarea, input[type="date"].main-input {
+            padding: 14px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            background: #0a0a0a;
+            color: var(--accent);
+            width: 100%;
+            max-width: 450px;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        input[type="text"].main-input:focus { border-color: var(--accent); outline: none; }
+        input[type="text"].main-input[readonly] { color: #888; background: #080808; cursor: pointer; }
+
+        input[type="date"].main-input { color-scheme: dark; cursor: pointer; }
+
+        textarea.dm-textarea { max-width: 100%; text-align: left; font-family: monospace; resize: vertical; }
+
+        .calendar-wrapper {
+            display: flex; background: #0a0a0a; border: 1px solid var(--grid-border);
+            border-radius: 8px; overflow-x: auto;
+            height: calc(var(--hour-height) * 24 + 55px);
+            -webkit-overflow-scrolling: touch;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .time-labels {
+            width: 60px; flex-shrink: 0; background: #080808;
+            border-right: 1px solid var(--grid-border); display: flex;
+            flex-direction: column; padding-top: 50px;
+        }
+        .time-label {
+            height: var(--hour-height); color: #666; font-size: 0.75em;
+            display: flex; align-items: flex-start; justify-content: center;
+            transform: translateY(-8px);
+        }
+
+        .day-column {
+            flex: 1; min-width: 130px; border-right: 1px solid var(--grid-border);
+            display: flex; flex-direction: column; position: relative;
+        }
+
+        .day-header {
+            height: 50px; background: #111; border-bottom: 1px solid var(--grid-border);
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; position: sticky; top: 0; z-index: 10;
+        }
+        .day-name { font-weight: bold; color: #eee; font-size: 0.95em; }
+        .day-date { font-size: 0.75em; color: #888; }
+
+        .day-body {
+            position: relative; flex: 1; background-size: 100% var(--hour-height);
+            background-image: linear-gradient(to bottom, #1a1a1a 1px, transparent 1px);
+            cursor: crosshair;
+        }
+        .day-body:hover { background-color: rgba(255, 106, 0, 0.02); }
+
+        .event-block {
+            position: absolute; left: 4%; width: 92%; background-color: var(--free);
+            color: #fff; border-radius: 6px; font-size: 0.85em; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid #ff7043; z-index: 5;
+            padding: 2px; text-align: center; line-height: 1.2;
+            transition: all 0.2s ease;
+            animation: fadeInSimple 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+        .event-block:hover { background-color: var(--danger); border-color: #ff3d00; }
+        .event-block:hover span { display: none; }
+        .event-block:hover::after { content: "RIMUOVI"; letter-spacing: 1px; }
+
+        @keyframes fadeInSimple { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalShow { from { opacity: 0; transform: scale(0.95) translateY(-10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center;
+            z-index: 100; backdrop-filter: blur(5px); animation: fadeInSimple 0.2s ease;
+        }
+        .modal-content {
+            position: relative; background: var(--card-bg); padding: 30px; border-radius: 12px;
+            border: 1px solid #333; width: 95%; max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8); animation: modalShow 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+            max-height: 90vh; overflow-y: auto;
+        }
+
+        .close-x {
+            position: absolute; top: 15px; right: 20px; color: #666; font-size: 28px;
+            cursor: pointer; transition: 0.2s;
+        }
+        .close-x:hover { color: var(--danger); }
+
+        .time-select-group { display: flex; align-items: center; gap: 8px; margin: 15px 0; }
+        .custom-select { position: relative; flex: 1; }
+        .select-selected {
+            background-color: #080808; border: 1px solid #333; border-radius: 6px;
+            display: flex; align-items: center; overflow: hidden; transition: border-color 0.3s;
+        }
+        .select-selected:focus-within { border-color: var(--accent); }
+
+        .select-input {
+            background: transparent; border: none; color: #fff; font-size: 1.2em;
+            width: 100%; text-align: center; padding: 12px 0; outline: none; font-weight: bold;
+        }
+        .select-input:disabled { color: #444; }
+
+        .select-arrow { padding: 12px 10px; color: var(--accent); cursor: pointer; background: #111; font-size: 0.8em; border-left: 1px solid #333;}
+
+        .select-items {
+            position: absolute; background-color: #111; top: 100%; left: 0; right: 0;
+            z-index: 99; border: 1px solid var(--accent); border-radius: 6px;
+            max-height: 180px; overflow-y: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.8);
+        }
+        .select-items div { padding: 12px; border-bottom: 1px solid #222; cursor: pointer; transition: background 0.1s; }
+        .select-items div:hover { background: var(--accent); color: #000; font-weight: bold; }
+        .select-hide { display: none; }
+
+        .all-day-container { margin: 15px 0; text-align: center; background: #0a0a0a; padding: 10px; border-radius: 6px; border: 1px solid #222;}
+        .all-day-container label { cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; color: #ccc;}
+        .all-day-container input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;}
+
+        .multi-day-section {
+            background: #080808; border: 1px solid #222; border-radius: 8px;
+            padding: 15px; margin: 20px 0; text-align: left;
+        }
+        .multi-day-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px;
+        }
+        .multi-day-grid label {
+            display: flex; align-items: center; gap: 8px; font-size: 0.9em; color: #aaa; cursor: pointer; transition: color 0.2s;
+        }
+        .multi-day-grid label:hover { color: #fff; }
+        .multi-day-grid input { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer;}
+
+        #exportResult, .converter-result {
+            position: relative;
+            margin-top: 25px; padding: 25px 20px 20px 20px; background: #080808;
+            border: 1px solid #333; border-radius: 8px; border-left: 4px solid var(--accent);
+        }
+        #codeOutput, .code-output-text {
+            font-family: 'Courier New', Courier, monospace; color: var(--accent); word-break: break-all;
+            display: block; padding: 15px; background: #000; border-radius: 6px; border: 1px solid #222;
+            font-size: 0.9em; min-height: 60px; text-align: left; margin-top: 5px;
+        }
+
+        .copy-icon-btn {
+            position: absolute; top: 12px; right: 10px; background: #1a1a1a !important;
+            border: 1px solid #333 !important; cursor: pointer; color: var(--text-color);
+            padding: 6px !important; border-radius: 4px !important; display: flex;
+            align-items: center; justify-content: center; z-index: 10;
+            transition: all 0.2s ease; width: auto !important; margin: 0 !important;
+        }
+        .copy-icon-btn:hover { background: #333 !important; color: #fff; }
+        .copy-icon-btn.copy-success { background: var(--success) !important; border-color: var(--success) !important; color: #000 !important; }
+        .copy-icon-btn svg { width: 20px; height: 20px; fill: currentColor; pointer-events: none; }
+
+        .result-day {
+            padding: 18px; margin: 15px 0; border-radius: 8px;
+            background: #0a0a0a; text-align: left; border-left: 5px solid #333;
+            cursor: pointer; transition: background 0.2s, transform 0.1s;
+        }
+        .result-day:hover { background: #111; transform: translateX(2px); }
+        .result-day.match { border-left-color: var(--accent); background: #15100a; }
+
+        .details-panel { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #333; }
+        .result-day.expanded .details-panel { display: block; animation: fadeInSimple 0.3s ease; }
+
+        .expand-icon { float: right; color: #666; font-size: 0.9em; transition: transform 0.3s; margin-top: 2px; }
+        .result-day.expanded .expand-icon { transform: rotate(180deg); color: var(--accent); }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 600px) {
+            .day-column { min-width: 100px; }
+            .btn-group { flex-direction: column; width: 100%; }
+            button:not(.copy-icon-btn) { width: 100%; margin: 5px 0; }
+            h1 { font-size: 1.6rem; }
+        }
+        .mode-toggle{display:flex;justify-content:center;gap:8px;margin-bottom:20px}
+        .mode-toggle button{padding:8px 18px;font-size:13px;background:#222;color:#aaa}
+        .mode-toggle button.active{background:var(--accent);color:#050505}
+        .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+        .month-nav button{padding:8px 14px}
+        .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+        .month-head{color:#888;font-size:.75em;padding:4px 0}
+        .month-cell{min-height:70px;background:#0a0a0a;border:1px solid var(--grid-border);border-radius:6px;padding:4px;cursor:pointer;font-size:.7em;text-align:left;overflow:hidden}
+        .month-cell:hover{border-color:var(--accent)}
+        .month-cell.has{background:var(--free);border-color:#ff7043;color:#fff}
+        .month-cell.past{opacity:.3;pointer-events:none}
+        .month-cell.empty{background:none;border:none;cursor:default;pointer-events:none}
+        .month-cell b{display:block;font-size:1.15em;margin-bottom:2px}
+        .day-list-item{display:flex;justify-content:space-between;align-items:center;background:#0a0a0a;border:1px solid #222;border-radius:6px;padding:8px 12px;margin-bottom:6px}
+        .day-list-item span.x{color:var(--danger);cursor:pointer;font-weight:bold}
+    </style>
+</head>
+<body>
+
+    <h1 onclick="handleSecretTap()">D&D Scheduler</h1>
+
+    <div id="playerTab" class="container">
+        <input type="text" id="playerName" class="main-input" placeholder="Il tuo Nome o Nome PG" oninput="saveDataAndCheck()">
+
+        <div class="mode-toggle">
+            <button id="modeWeekBtn" onclick="setMode('week')">Settimanale</button>
+            <button id="modeMonthBtn" onclick="setMode('month')">Mensile</button>
+        </div>
+        <div id="monthWrapper" class="hidden">
+            <div class="month-nav">
+                <button id="monthPrev" onclick="changeMonth(-1)">◀</button>
+                <h3 id="monthTitle" style="color:var(--accent);margin:0;text-transform:uppercase"></h3>
+                <button onclick="changeMonth(1)">▶</button>
+            </div>
+            <div class="month-grid" id="monthGrid"></div>
+            <p style="color:#666;font-size:.8em">Tocca un giorno per aggiungere o rimuovere fasce orarie.</p>
+        </div>
+        <div class="calendar-wrapper" id="calWrapper">
+            <div class="time-labels" id="timeLabels"></div>
+        </div>
+
+        <div class="btn-group">
+            <button id="resetBtn" class="btn-danger" onclick="resetCalendar()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                Svuota Calendario
+            </button>
+            <button id="exportBtn" onclick="tryExportCode()" disabled>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                Invia Disponibilità
+            </button>
+        </div>
+
+        <div id="exportResult" class="hidden">
+            <h3 style="margin-top:0; color: var(--success); font-size: 1.2em; border-bottom: 1px solid #333; padding-bottom: 10px;">✅ Dati Pronti!</h3>
+            <p style="color: #ccc; font-size: 0.9em; text-align: left; margin-bottom: 10px; font-weight: bold;">Condividi questo link con il Master:</p>
+
+            <div style="position: relative; margin-bottom: 20px;">
+                <input type="text" id="urlOutput" class="main-input" style="margin-bottom: 0; padding-right: 50px; font-size: 0.85em; font-family: monospace;" readonly onclick="this.select()">
+                <button class="copy-icon-btn" id="urlCopyBtn" onclick="copyToClipboard('urlOutput', true)" title="Copia Link">
+                    <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </button>
+            </div>
+
+            <details style="text-align: left; border-top: 1px dashed #333; padding-top: 15px;">
+                <summary style="cursor: pointer; color: #888; font-size: 0.85em; user-select: none;">Oppure usa il codice testuale classico (Pannello DM Base)</summary>
+                <div style="position: relative; margin-top: 10px;">
+                    <strong id="codeOutput" class="code-output-text" style="padding-right: 50px;"></strong>
+                    <button class="copy-icon-btn" id="mainCopyBtn" onclick="copyToClipboard('codeOutput', false)" title="Copia Codice" style="top: 10px;">
+                        <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    </button>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <div id="eventModal" class="modal hidden" onclick="if(event.target === this) closeModal()">
+        <div class="modal-content">
+            <span class="close-x" onclick="closeModal()">&times;</span>
+            <h3 style="margin:0 0 20px 0; color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px;" id="modalTitle">Orario</h3>
+
+            <div class="all-day-container">
+                <label><input type="checkbox" id="allDayCheck" onchange="toggleAllDay()"> Tutto il giorno</label>
+            </div>
+
+            <label style="font-size: 0.85em; color: #aaa;">Inizio (Da):</label>
+            <div class="time-select-group">
+                <div class="custom-select">
+                    <div class="select-selected">
+                        <input type="text" id="val-startHour" class="select-input" placeholder="--" maxlength="2" inputmode="numeric" onfocus="openDropdown('list-startHour')" onblur="handleBlur('list-startHour', this)">
+                        <span class="select-arrow" onclick="toggleDropdown('list-startHour', event)">▼</span>
+                    </div>
+                    <div class="select-items select-hide" id="list-startHour"></div>
+                </div>
+                <span>:</span>
+                <div class="custom-select">
+                    <div class="select-selected">
+                        <input type="text" id="val-startMinute" class="select-input" placeholder="--" maxlength="2" inputmode="numeric" onfocus="openDropdown('list-startMinute')" onblur="handleBlur('list-startMinute', this)">
+                        <span class="select-arrow" onclick="toggleDropdown('list-startMinute', event)">▼</span>
+                    </div>
+                    <div class="select-items select-hide" id="list-startMinute"></div>
+                </div>
+            </div>
+
+            <label style="font-size: 0.85em; color: #aaa;">Fine (A):</label>
+            <div class="time-select-group">
+                <div class="custom-select">
+                    <div class="select-selected">
+                        <input type="text" id="val-endHour" class="select-input" placeholder="--" maxlength="2" inputmode="numeric" onfocus="openDropdown('list-endHour')" onblur="handleBlur('list-endHour', this)">
+                        <span class="select-arrow" onclick="toggleDropdown('list-endHour', event)">▼</span>
+                    </div>
+                    <div class="select-items select-hide" id="list-endHour"></div>
+                </div>
+                <span>:</span>
+                <div class="custom-select">
+                    <div class="select-selected">
+                        <input type="text" id="val-endMinute" class="select-input" placeholder="--" maxlength="2" inputmode="numeric" onfocus="openDropdown('list-endMinute')" onblur="handleBlur('list-endMinute', this)">
+                        <span class="select-arrow" onclick="toggleDropdown('list-endMinute', event)">▼</span>
+                    </div>
+                    <div class="select-items select-hide" id="list-endMinute"></div>
+                </div>
+            </div>
+
+            <div id="dayEventsList"></div>
+            <div class="multi-day-section">
+                <span style="font-size: 0.85em; color: var(--accent); font-weight: bold; text-transform: uppercase;">Applica orario anche a:</span>
+                <div class="multi-day-grid" id="multiDayGrid"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 25px;">
+                <button onclick="saveEvent()" style="width: 100%;">Salva Disponibilità</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal hidden" onclick="if(event.target === this) closeConfirmModal()">
+        <div class="modal-content" style="text-align: center;">
+            <span class="close-x" onclick="closeConfirmModal()">&times;</span>
+            <h3 style="color: var(--accent); margin-top: 0;">⚠️ CONFERMA ASSENZA</h3>
+            <p id="emptyDaysMessage" style="font-size: 0.95em; line-height: 1.5; margin-bottom: 25px; color: #ccc;"></p>
+            <div class="btn-group">
+                <button onclick="proceedExport()" style="flex: 1;">Procedi</button>
+                <button class="btn-danger" onclick="closeConfirmModal()" style="flex: 1;">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorModal" class="modal hidden" onclick="if(event.target === this) closeErrorModal()">
+        <div class="modal-content" style="text-align: center; padding-bottom: 20px;">
+            <span class="close-x" onclick="closeErrorModal()">&times;</span>
+            <h3 style="color: var(--danger); margin-top: 0;">⚠️ ERRORE</h3>
+            <p id="errorMessage" style="font-size: 0.95em; line-height: 1.4; margin: 0; padding-bottom: 10px;"></p>
+        </div>
+    </div>
+
+    <div id="dmTab" class="container hidden">
+        <h2 style="color: var(--accent); text-transform: uppercase; font-size: 1.6rem; letter-spacing: 1px;">Schermo del Master</h2>
+        <textarea id="dmInput" class="dm-textarea" placeholder="Incolla qui i codici o i link ricevuti dai giocatori (uno per riga)..." oninput="localStorage.setItem('dmCodesText', this.value)" style="height: 140px;"></textarea>
+
+        <div class="btn-group">
+            <button class="btn-danger" onclick="clearDMCodes()" style="width: auto;">Svuota</button>
+            <button onclick="calculateDates()" style="flex: 1; max-width: 350px;">Incrocia Orari</button>
+        </div>
+
+        <div id="dmResultsWrapper" style="margin-top: 20px;">
+            <div id="dmResults"></div>
+        </div>
+
+        <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 25px; text-align: left;">
+            <div onclick="toggleConverter()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; background: #0a0a0a; padding: 15px; border-radius: 8px;">
+                <h3 style="color: #aaa; text-transform: uppercase; margin: 0; font-size: 1.1rem;">Strumenti Aggiuntivi: Convertitore Settimana</h3>
+                <span id="converterExpandIcon" style="color: var(--accent); font-size: 1.2em; transition: transform 0.3s; pointer-events: none;">▼</span>
+            </div>
+
+            <div id="converterBody" class="hidden" style="margin-top: 15px; animation: fadeInSimple 0.3s ease; padding: 15px; border: 1px solid #222; border-radius: 8px; background: #080808;">
+                <p style="color: #888; font-size: 0.9em; margin-top: 0;">Aggiorna un codice obsoleto generato in una settimana precedente per riutilizzarlo nella settimana corrente.</p>
+                <input type="text" id="convertOldCode" class="main-input" placeholder="Incolla qui il vecchio codice..." style="max-width: 100%; text-align: left; margin-bottom: 15px; font-size: 0.95em;">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="date" id="targetWeekDate" class="main-input" style="max-width: 180px; margin-bottom: 0; padding: 10px;" onchange="updateSelectedWeekDisplay()">
+                        <span id="selectedWeekDisplay" style="color: var(--accent); font-size: 0.85em; font-weight: bold;"></span>
+                    </div>
+                    <button onclick="syncConverterDatesWithCurrent()" class="btn-danger" style="padding: 10px 15px; font-size: 12px; margin: 0;">Usa Settimana Attuale</button>
+                </div>
+
+                <div style="text-align: right;">
+                    <button onclick="convertCodeWeek()">Converti e Genera</button>
+                </div>
+
+                <div id="converterResultBlock" class="converter-result hidden">
+                    <button class="copy-icon-btn" id="converterCopyBtn" onclick="copyToClipboard('convertedCodeText', false)" title="Copia Codice">
+                        <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    </button>
+                    <p style="color: var(--success); font-size: 0.85em; margin-top: 0; font-weight: bold;">✓ Conversione completata!</p>
+                    <strong id="convertedCodeText" class="code-output-text"></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    /**
+     * D&D SESSION SCHEDULER
+     * =====================
+     *
+     * SUMMARY
+     * Single-page tool to find a common time for a D&D session.
+     * - Players mark when they are free (weekly grid or monthly calendar) and
+     *   export a share code / link containing their availability.
+     * - The Master (hidden view) pastes the codes and the app computes the
+     *   overlaps, converting every player's time zone into the Master's one.
+     *   Results can be exported as a PNG image.
+     *
+     * MODES
+     * - "week":  hour grid for the next Monday-Sunday week.
+     * - "month": day calendar for a chosen month (default: next month).
+     *
+     * SHARE CODE FORMAT (kept stable for backward compatibility)
+     * Base64( encodeURIComponent( JSON ) ), where the JSON is:
+     *   { n: string,                      player name
+     *     e: Range[][] | {dateKey: Range[]},  availability (week: 7 arrays; month: map)
+     *     d: string[7],                   week only: localized dates of the week
+     *     m: "YYYY-MM",                   month only: month the code refers to
+     *     tz: number }                    player's Date#getTimezoneOffset() in minutes
+     * Range = { start, end } in minutes from midnight (0-1440).
+     * A code with "m" is monthly, a code with "d" is weekly.
+     *
+     * STORAGE (localStorage keys, unchanged from previous versions)
+     * dndSchedulerSave, dndMonthSave, dndMode, dmCodesText.
+     *
+     * MASTER VIEW
+     * Opened by tapping the title 7 times quickly, Ctrl+Shift+M, or by opening a
+     * shared link (?data=...).
+     *
+     * SECTIONS
+     * 1. Constants, state and generic helpers
+     * 2. Application startup and Master view switching
+     * 3. Persistence
+     * 4. Weekly calendar
+     * 5. Event modal and time selectors
+     * 6. Monthly calendar
+     * 7. Export of player data
+     * 8. Master: availability computation and results
+     * 9. Master: image export
+     * 10. Week code converter
+     */
+
+    /* ---------- 1. Constants, state and helpers ---------- */
+
+    const WEEKDAYS = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+    const MONTH_NAMES = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const MINUTES_PER_DAY = 1440;
+    const HOUR_HEIGHT_PX = 40;
+    const SECRET_TAP_TARGET = 7;
+    const SECRET_TAP_WINDOW_MS = 500;
+    const STORAGE_KEYS = { week: 'dndSchedulerSave', month: 'dndMonthSave', mode: 'dndMode', masterCodes: 'dmCodesText' };
+    const TIME_FIELD_IDS = ['startHour', 'startMinute', 'endHour', 'endMinute'];
+
+    let weeklyEvents = createEmptyWeek();
+    let monthlyEvents = {};
+    let weekDates = [];
+    let selectedDayIndex = 0;
+    let selectedDateKey = null;
+    let mode = localStorage.getItem(STORAGE_KEYS.mode) || 'week';
+    let monthRef = getNextMonthRef();
+    let secretTapCount = 0;
+    let secretTapTimer;
+
+    /**
+     * Shortcut for document.getElementById.
+     * @param {string} id
+     * @returns {HTMLElement}
+     */
+    const $ = id => document.getElementById(id);
+
+    /** @returns {Array[]} Seven empty arrays, one per weekday. */
+    function createEmptyWeek() {
+        return Array.from({ length: 7 }, () => []);
+    }
+
+    /** @returns {{y: number, m: number}} Year and zero-based month of the next calendar month. */
+    function getNextMonthRef() {
+        const now = new Date();
+        const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        return { y: next.getFullYear(), m: next.getMonth() };
+    }
+
+    /**
+     * Left-pads a number to two digits.
+     * @param {number} n
+     * @returns {string}
+     */
+    const pad2 = n => String(n).padStart(2, '0');
+
+    /**
+     * Converts minutes from midnight to "HH:MM".
+     * @param {number} minutes
+     * @returns {string}
+     */
+    const minutesToTime = minutes => `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
+
+    /**
+     * Escapes text before inserting it into innerHTML (player names come from pasted codes).
+     * @param {*} value
+     * @returns {string}
+     */
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    /**
+     * Weekday index with Monday = 0 and Sunday = 6.
+     * @param {Date} date
+     * @returns {number}
+     */
+    const getWeekdayIndex = date => (date.getDay() + 6) % 7;
+
+    /**
+     * Returns the Monday of the week containing the given date.
+     * @param {Date} date
+     * @returns {Date} A new Date instance.
+     */
+    function getMondayOf(date) {
+        const monday = new Date(date);
+        monday.setDate(monday.getDate() - getWeekdayIndex(monday));
+        return monday;
+    }
+
+    /**
+     * Sorts ranges and merges overlapping or touching ones.
+     * @param {{start: number, end: number}[]} ranges
+     * @returns {{start: number, end: number}[]} A new, normalized array.
+     */
+    function mergeRanges(ranges) {
+        const merged = [];
+        [...ranges].sort((a, b) => a.start - b.start).forEach(range => {
+            const last = merged[merged.length - 1];
+            if (last && last.end >= range.start) last.end = Math.max(last.end, range.end);
+            else merged.push({ ...range });
+        });
+        return merged;
+    }
+
+    /**
+     * Encodes a payload into a share code.
+     * @param {Object} data
+     * @returns {string}
+     */
+    const encodeShareCode = data => btoa(encodeURIComponent(JSON.stringify(data)));
+
+    /**
+     * Decodes a share code; a full link containing "?data=" is also accepted.
+     * @param {string} raw
+     * @returns {Object}
+     * @throws {Error} If the code is malformed.
+     */
+    function decodeShareCode(raw) {
+        let code = raw.trim();
+        if (code.includes('?data=')) code = code.split('?data=')[1];
+        return JSON.parse(decodeURIComponent(atob(code)));
+    }
+
+    /**
+     * Shows the error modal.
+     * @param {string} message
+     */
+    function showError(message) {
+        $('errorMessage').innerText = message;
+        $('errorModal').classList.remove('hidden');
+    }
+
+    const closeErrorModal = () => $('errorModal').classList.add('hidden');
+    const closeConfirmModal = () => $('confirmModal').classList.add('hidden');
+    const closeModal = () => $('eventModal').classList.add('hidden');
+
+    /**
+     * Opens the confirmation modal with an HTML message.
+     * @param {string} html
+     */
+    function openConfirmModal(html) {
+        $('emptyDaysMessage').innerHTML = html;
+        $('confirmModal').classList.remove('hidden');
+    }
+
+    /* ---------- 2. Startup and Master view ---------- */
+
+    /** Initializes both calendars, restores saved data and handles shared links. */
+    window.onload = () => {
+        initCalendar();
+        loadMonthlyState();
+        setMode(mode);
+        $('dmInput').value = localStorage.getItem(STORAGE_KEYS.masterCodes) || '';
+
+        const sharedCode = new URLSearchParams(window.location.search).get('data');
+        if (!sharedCode) return;
+
+        const input = $('dmInput');
+        if (!input.value.includes(sharedCode)) {
+            input.value = (input.value ? input.value + '\n' : '') + sharedCode;
+            localStorage.setItem(STORAGE_KEYS.masterCodes, input.value);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showMasterView(true);
+        calculateDates();
+    };
+
+    document.addEventListener('keydown', event => {
+        if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'm') toggleMasterView();
+    });
+
+    /**
+     * Shows the Master view or the player view.
+     * @param {boolean} showMaster
+     */
+    function showMasterView(showMaster) {
+        $('dmTab').classList.toggle('hidden', !showMaster);
+        $('playerTab').classList.toggle('hidden', showMaster);
+    }
+
+    /** Switches between player and Master view. */
+    function toggleMasterView() {
+        showMasterView($('dmTab').classList.contains('hidden'));
+    }
+
+    /** Counts quick taps on the title; the 7th unlocks the Master view. */
+    function handleSecretTap() {
+        secretTapCount++;
+        clearTimeout(secretTapTimer);
+        if (secretTapCount >= SECRET_TAP_TARGET) {
+            toggleMasterView();
+            secretTapCount = 0;
+        }
+        secretTapTimer = setTimeout(() => { secretTapCount = 0; }, SECRET_TAP_WINDOW_MS);
+    }
+
+    /* ---------- 3. Persistence ---------- */
+
+    /** Saves the weekly data (and the player name). */
+    function saveWeeklyState() {
+        localStorage.setItem(STORAGE_KEYS.week, JSON.stringify({ n: $('playerName').value, e: weeklyEvents, d: weekDates[0] }));
+    }
+
+    /** Restores weekly data only if it belongs to the currently displayed week. */
+    function loadWeeklyState() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.week) || 'null');
+            if (saved && saved.d === weekDates[0]) {
+                $('playerName').value = saved.n || '';
+                weeklyEvents = saved.e || createEmptyWeek();
+                renderWeek();
+            }
+        } catch (error) { }
+        updateButtons();
+    }
+
+    /** Saves the monthly data (and the player name). */
+    function saveMonthlyState() {
+        localStorage.setItem(STORAGE_KEYS.month, JSON.stringify({ n: $('playerName').value, e: monthlyEvents }));
+    }
+
+    /** Restores monthly data; the saved name is used only if the field is empty. */
+    function loadMonthlyState() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.month) || 'null');
+            if (saved) {
+                monthlyEvents = saved.e || {};
+                if (!$('playerName').value) $('playerName').value = saved.n || '';
+            }
+        } catch (error) { }
+        updateButtons();
+    }
+
+    /** Persists both modes and refreshes the buttons; called after every change. */
+    function saveDataAndCheck() {
+        saveWeeklyState();
+        saveMonthlyState();
+        updateButtons();
+    }
+
+    /** Enables "send" when a name is set and "reset" when the current mode has events. */
+    function updateButtons() {
+        const hasName = $('playerName').value.trim().length > 0;
+        const hasEvents = mode === 'month' ? monthHasEvents() : weeklyEvents.some(day => day.length > 0);
+        $('exportBtn').disabled = !hasName;
+        $('resetBtn').disabled = !hasEvents;
+    }
+
+    /** Clears the current mode's availability after confirmation. */
+    function resetCalendar() {
+        if (mode === 'month') return resetMonth();
+        if (!confirm('Vuoi davvero svuotare tutti gli orari impostati per questa settimana?')) return;
+        weeklyEvents = createEmptyWeek();
+        renderWeek();
+        saveDataAndCheck();
+    }
+
+    /* ---------- 4. Weekly calendar ---------- */
+
+    /** Builds the hour labels and the 7 day columns for next week, then loads saved data. */
+    function initCalendar() {
+        populateTimeSelects();
+        const monday = getMondayOf(new Date());
+        monday.setDate(monday.getDate() + 7);
+
+        $('timeLabels').innerHTML = Array.from({ length: 24 }, (_, hour) => `<div class="time-label">${pad2(hour)}:00</div>`).join('');
+
+        weekDates = [];
+        const columns = WEEKDAYS.map((name, index) => {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + index);
+            const dateLabel = date.toLocaleDateString('it-IT');
+            weekDates.push(dateLabel);
+            return `<div class="day-column"><div class="day-header"><span class="day-name">${name}</span><span class="day-date">${dateLabel}</span></div><div class="day-body" id="dayBody${index}" onclick="openModal(${index}, event)"></div></div>`;
+        }).join('');
+
+        const wrapper = $('calWrapper');
+        Array.from(wrapper.children).forEach(child => { if (child.id !== 'timeLabels') child.remove(); });
+        wrapper.insertAdjacentHTML('beforeend', columns);
+        setTimeout(() => { wrapper.scrollTop = 8 * HOUR_HEIGHT_PX; }, 100);
+        loadWeeklyState();
+    }
+
+    /** Draws the availability blocks of every weekday; clicking a block removes it. */
+    function renderWeek() {
+        weeklyEvents.forEach((ranges, dayIndex) => {
+            const body = $(`dayBody${dayIndex}`);
+            body.innerHTML = '';
+            ranges.forEach((range, rangeIndex) => {
+                const block = document.createElement('div');
+                block.className = 'event-block';
+                block.style.top = (range.start / 60) * HOUR_HEIGHT_PX + 'px';
+                block.style.height = ((range.end - range.start) / 60) * HOUR_HEIGHT_PX + 'px';
+                block.innerHTML = `<span>${minutesToTime(range.start)}<br>${minutesToTime(range.end)}</span>`;
+                block.onclick = event => {
+                    event.stopPropagation();
+                    weeklyEvents[dayIndex].splice(rangeIndex, 1);
+                    renderWeek();
+                    saveDataAndCheck();
+                };
+                body.appendChild(block);
+            });
+        });
+    }
+
+    /**
+     * Opens the event modal for a weekday.
+     * @param {number} dayIndex Monday = 0.
+     * @param {MouseEvent} [event] Ignored if the click came from a child element.
+     */
+    function openModal(dayIndex, event) {
+        if (event && event.target !== event.currentTarget) return;
+        selectedDayIndex = dayIndex;
+        selectedDateKey = null;
+        $('dayEventsList').innerHTML = '';
+        $('modalTitle').innerText = `${WEEKDAYS[dayIndex]} ${weekDates[dayIndex]}`;
+        resetModalFields();
+        $('multiDayGrid').innerHTML = WEEKDAYS
+            .map((name, i) => i === dayIndex ? '' : `<label><input type="checkbox" class="multi-day-chk" value="${i}"> ${name}</label>`)
+            .join('');
+        $('eventModal').classList.remove('hidden');
+    }
+
+    /* ---------- 5. Event modal and time selectors ---------- */
+
+    /** Clears the all-day flag, the time fields and any open dropdown. */
+    function resetModalFields() {
+        $('allDayCheck').checked = false;
+        toggleAllDay();
+        document.querySelectorAll('.select-items').forEach(el => el.classList.add('select-hide'));
+    }
+
+    /** Fills the hour/minute dropdown lists. */
+    function populateTimeSelects() {
+        const build = (id, max, step) => {
+            let html = '';
+            for (let i = 0; i < max; i += step) {
+                const value = pad2(i);
+                html += `<div onclick="selectValue('${id}','list-${id}','${value}')">${value}</div>`;
+            }
+            $('list-' + id).innerHTML = html;
+        };
+        build('startHour', 24, 1);
+        build('startMinute', 60, 5);
+        build('endHour', 25, 1);
+        build('endMinute', 60, 5);
+    }
+
+    /** Closes every dropdown and opens the given one. @param {string} listId */
+    function openDropdown(listId) {
+        document.querySelectorAll('.select-items').forEach(el => el.classList.add('select-hide'));
+        $(listId).classList.remove('select-hide');
+    }
+
+    /** Toggles a dropdown from its arrow. @param {string} listId @param {Event} event */
+    function toggleDropdown(listId, event) {
+        event.stopPropagation();
+        $(listId).classList.toggle('select-hide');
+    }
+
+    /** Writes a chosen value into a time field and closes its list. */
+    function selectValue(fieldId, listId, value) {
+        $('val-' + fieldId).value = value;
+        $(listId).classList.add('select-hide');
+    }
+
+    /** Zero-pads a typed number and hides the list after a short delay (lets list clicks register). */
+    function handleBlur(listId, input) {
+        if (input.value && !isNaN(input.value)) input.value = input.value.padStart(2, '0');
+        setTimeout(() => $(listId).classList.add('select-hide'), 200);
+    }
+
+    /** The "all day" checkbox fills 00:00-24:00 and locks the fields; unchecking clears them. */
+    function toggleAllDay() {
+        const allDay = $('allDayCheck').checked;
+        const values = allDay ? ['00', '00', '24', '00'] : ['', '', '', ''];
+        TIME_FIELD_IDS.forEach((id, i) => {
+            $('val-' + id).value = values[i];
+            $('val-' + id).disabled = allDay;
+        });
+    }
+
+    /** Validates the modal fields and stores the range (weekly, or monthly if a date is selected). */
+    function saveEvent() {
+        const [startHour, startMinute, endHour, endMinute] = TIME_FIELD_IDS.map(id => parseInt($('val-' + id).value));
+        if ([startHour, startMinute, endHour, endMinute].some(isNaN)) return showError('Inserisci orari validi.');
+        const invalid = startHour < 0 || startHour > 23 || startMinute < 0 || startMinute > 59 || endHour < 0 || endHour > 24 || endMinute < 0 || endMinute > 59 || (endHour === 24 && endMinute > 0);
+        if (invalid) return showError('Orario non valido.');
+
+        const start = startHour * 60 + startMinute;
+        const end = endHour * 60 + endMinute;
+        if (start >= end) return showError("L'ora di fine deve essere successiva all'inizio.");
+        if (selectedDateKey) return saveMonthlyEvent(start, end);
+
+        const targetDays = [selectedDayIndex, ...Array.from(document.querySelectorAll('.multi-day-chk:checked'), el => parseInt(el.value))];
+        targetDays.forEach(day => { weeklyEvents[day] = mergeRanges([...weeklyEvents[day], { start, end }]); });
+        renderWeek();
+        closeModal();
+        saveDataAndCheck();
+    }
+
+    /* ---------- 6. Monthly calendar ---------- */
+
+    const getMonthKey = () => `${monthRef.y}-${pad2(monthRef.m + 1)}`;
+
+    /** @returns {boolean} True if the displayed month has at least one range. */
+    const monthHasEvents = () => Object.keys(monthlyEvents).some(key => key.startsWith(getMonthKey()) && monthlyEvents[key].length);
+
+    /** @returns {Object} Only the displayed month's non-empty days, ready for export. */
+    function getMonthEventsForExport() {
+        const result = {};
+        Object.keys(monthlyEvents).forEach(key => {
+            if (key.startsWith(getMonthKey()) && monthlyEvents[key].length) result[key] = monthlyEvents[key];
+        });
+        return result;
+    }
+
+    /**
+     * Switches between "week" and "month" mode and updates the interface.
+     * @param {'week'|'month'} newMode
+     */
+    function setMode(newMode) {
+        mode = newMode;
+        localStorage.setItem(STORAGE_KEYS.mode, mode);
+        $('calWrapper').classList.toggle('hidden', mode === 'month');
+        $('monthWrapper').classList.toggle('hidden', mode !== 'month');
+        $('modeWeekBtn').classList.toggle('active', mode === 'week');
+        $('modeMonthBtn').classList.toggle('active', mode === 'month');
+        $('exportResult').classList.add('hidden');
+        if (mode === 'month') renderMonth();
+        updateButtons();
+    }
+
+    /** Moves the displayed month; past months are not reachable. @param {number} delta -1 or 1 */
+    function changeMonth(delta) {
+        const target = new Date(monthRef.y, monthRef.m + delta, 1);
+        const today = new Date();
+        if (target < new Date(today.getFullYear(), today.getMonth(), 1)) return;
+        monthRef = { y: target.getFullYear(), m: target.getMonth() };
+        renderMonth();
+        updateButtons();
+        $('exportResult').classList.add('hidden');
+    }
+
+    /** Draws the month grid; days with ranges are highlighted, past days are disabled. */
+    function renderMonth() {
+        $('monthTitle').innerText = `${MONTH_NAMES[monthRef.m]} ${monthRef.y}`;
+        const today = new Date();
+        const todayKey = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+        const dayCount = new Date(monthRef.y, monthRef.m + 1, 0).getDate();
+        const leadingBlanks = getWeekdayIndex(new Date(monthRef.y, monthRef.m, 1));
+
+        let html = WEEKDAYS.map(name => `<div class="month-head">${name.slice(0, 3)}</div>`).join('');
+        html += '<div class="month-cell empty"></div>'.repeat(leadingBlanks);
+        for (let day = 1; day <= dayCount; day++) {
+            const key = `${getMonthKey()}-${pad2(day)}`;
+            const ranges = monthlyEvents[key] || [];
+            const summary = ranges.slice(0, 2).map(r => `${minutesToTime(r.start)}-${minutesToTime(r.end)}`).join('<br>') + (ranges.length > 2 ? `<br>+${ranges.length - 2}` : '');
+            html += `<div class="month-cell${ranges.length ? ' has' : ''}${key < todayKey ? ' past' : ''}" onclick="openMonthModal('${key}')"><b>${day}</b>${summary}</div>`;
+        }
+        $('monthGrid').innerHTML = html;
+    }
+
+    /** Opens the event modal for a calendar day. @param {string} dateKey "YYYY-MM-DD" */
+    function openMonthModal(dateKey) {
+        selectedDateKey = dateKey;
+        const [year, month, day] = dateKey.split('-').map(Number);
+        const weekdayName = WEEKDAYS[getWeekdayIndex(new Date(year, month - 1, day))];
+        $('modalTitle').innerText = `${weekdayName} ${day}/${month}/${year}`;
+        resetModalFields();
+        $('multiDayGrid').innerHTML = `<label style="grid-column:1/3"><input type="checkbox" id="chkSameWeekday"> Tutti i ${weekdayName.toLowerCase()} del mese</label>`;
+        renderDayList();
+        $('eventModal').classList.remove('hidden');
+    }
+
+    /** Lists the ranges already set for the selected day, each with a remove button. */
+    function renderDayList() {
+        const ranges = monthlyEvents[selectedDateKey] || [];
+        $('dayEventsList').innerHTML = ranges.length
+            ? '<div style="text-align:left;font-size:.85em;color:#aaa;margin:10px 0 6px">FASCE GIÀ INSERITE</div>' + ranges.map((range, i) => `<div class="day-list-item"><b>${minutesToTime(range.start)} - ${minutesToTime(range.end)}</b><span class="x" onclick="removeMonthEvent(${i})">✕ rimuovi</span></div>`).join('')
+            : '';
+    }
+
+    /** Removes one range from the selected day. @param {number} index */
+    function removeMonthEvent(index) {
+        monthlyEvents[selectedDateKey].splice(index, 1);
+        if (!monthlyEvents[selectedDateKey].length) delete monthlyEvents[selectedDateKey];
+        renderDayList();
+        renderMonth();
+        saveDataAndCheck();
+    }
+
+    /**
+     * Adds a range to the selected day, or to every same weekday of the month if the checkbox is ticked.
+     * @param {number} start Minutes from midnight.
+     * @param {number} end Minutes from midnight.
+     */
+    function saveMonthlyEvent(start, end) {
+        const [year, month, day] = selectedDateKey.split('-').map(Number);
+        let keys = [selectedDateKey];
+        if ($('chkSameWeekday') && $('chkSameWeekday').checked) {
+            const weekday = new Date(year, month - 1, day).getDay();
+            const dayCount = new Date(year, month, 0).getDate();
+            keys = [];
+            for (let d = 1; d <= dayCount; d++) {
+                if (new Date(year, month - 1, d).getDay() === weekday) keys.push(`${year}-${pad2(month)}-${pad2(d)}`);
+            }
+        }
+        keys.forEach(key => { monthlyEvents[key] = mergeRanges([...(monthlyEvents[key] || []), { start, end }]); });
+        renderMonth();
+        closeModal();
+        saveDataAndCheck();
+    }
+
+    /** Clears the displayed month after confirmation. */
+    function resetMonth() {
+        if (!confirm('Vuoi davvero svuotare tutte le disponibilità di questo mese?')) return;
+        Object.keys(monthlyEvents).forEach(key => { if (key.startsWith(getMonthKey())) delete monthlyEvents[key]; });
+        renderMonth();
+        saveDataAndCheck();
+    }
+
+    /* ---------- 7. Export of player data ---------- */
+
+    /** Asks for confirmation when the player declares total absence, otherwise exports. */
+    function tryExportCode() {
+        if (mode === 'month') {
+            if (monthHasEvents()) return proceedExport();
+            return openConfirmModal(`Stai comunicando che <b>non sei disponibile in nessun giorno di ${MONTH_NAMES[monthRef.m]}</b>. Confermi?`);
+        }
+        const emptyDays = WEEKDAYS.filter((_, i) => weeklyEvents[i].length === 0);
+        if (!emptyDays.length) return proceedExport();
+        openConfirmModal(emptyDays.length === 7
+            ? 'Stai comunicando che <b>non ci sei per tutta la settimana</b>. Confermi?'
+            : `Stai segnalando un'assenza totale per: <br><br><b style="color:var(--accent);">${emptyDays.join(', ')}</b><br><br>Procedo?`);
+    }
+
+    /** Builds the share payload for the current mode. @returns {Object} */
+    function buildShareData() {
+        const name = $('playerName').value;
+        const tz = new Date().getTimezoneOffset();
+        return mode === 'month'
+            ? { n: name, m: getMonthKey(), e: getMonthEventsForExport(), tz }
+            : { n: name, e: weeklyEvents, d: weekDates, tz };
+    }
+
+    /** Generates the share code and link and shows them. */
+    function proceedExport() {
+        const code = encodeShareCode(buildShareData());
+        $('codeOutput').innerText = code;
+        $('urlOutput').value = `${window.location.origin}${window.location.pathname}?data=${code}`;
+        $('exportResult').classList.remove('hidden');
+        closeConfirmModal();
+    }
+
+    /**
+     * Copies a field's text and flashes its copy button.
+     * @param {string} elementId 'urlOutput', 'codeOutput' or 'convertedCodeText'.
+     * @param {boolean} isInput True if the element is an <input>.
+     */
+    function copyToClipboard(elementId, isInput) {
+        const element = $(elementId);
+        const text = isInput ? element.value : element.innerText;
+        const buttonIds = { urlOutput: 'urlCopyBtn', codeOutput: 'mainCopyBtn', convertedCodeText: 'converterCopyBtn' };
+        navigator.clipboard.writeText(text).then(() => {
+            const button = $(buttonIds[elementId]);
+            button.classList.add('copy-success');
+            setTimeout(() => button.classList.remove('copy-success'), 2000);
+        });
+    }
+
+    /** Clears the Master's pasted codes after confirmation. */
+    function clearDMCodes() {
+        if (!confirm("Svuotare l'area di testo del Master?")) return;
+        $('dmInput').value = '';
+        localStorage.setItem(STORAGE_KEYS.masterCodes, '');
+        $('dmResults').innerHTML = '';
+    }
+
+    /* ---------- 8. Master: availability computation ---------- */
+
+    /**
+     * Groups consecutive minutes into "HH:MM - HH:MM" blocks.
+     * @param {number[]} minutes Ascending minute marks.
+     * @returns {string[]}
+     */
+    function getContinuousBlocks(minutes) {
+        const blocks = [];
+        let start = null;
+        let previous = null;
+        minutes.forEach(minute => {
+            if (start === null) start = minute;
+            else if (minute !== previous + 1) {
+                blocks.push(`${minutesToTime(start)} - ${minutesToTime(previous + 1)}`);
+                start = minute;
+            }
+            previous = minute;
+        });
+        if (start !== null) blocks.push(`${minutesToTime(start)} - ${minutesToTime(previous + 1)}`);
+        return blocks;
+    }
+
+    /**
+     * Turns the minute -> players map of partial overlaps into time blocks with their players.
+     * @param {Object<number, string[]>} partialMap
+     * @returns {{time: string, people: string[]}[]}
+     */
+    function getPartialBlocks(partialMap) {
+        const blocks = [];
+        let currentKey = null;
+        let currentPeople = [];
+        let currentMinutes = [];
+        const flush = () => getContinuousBlocks(currentMinutes).forEach(time => blocks.push({ time, people: currentPeople }));
+
+        Object.keys(partialMap).map(Number).sort((a, b) => a - b).forEach(minute => {
+            const people = [...partialMap[minute]].sort();
+            const key = people.join('\u0001');
+            if (key !== currentKey) {
+                flush();
+                currentKey = key;
+                currentPeople = people;
+                currentMinutes = [minute];
+            } else currentMinutes.push(minute);
+        });
+        flush();
+        return blocks;
+    }
+
+    /**
+     * Minutes to add to a player's times to express them in the Master's time zone.
+     * @param {{tz?: number}} player
+     * @param {number} masterTzOffset Master's Date#getTimezoneOffset().
+     * @returns {number}
+     */
+    const getTimezoneShift = (player, masterTzOffset) => player.tz !== undefined ? player.tz - masterTzOffset : 0;
+
+    /**
+     * Shifts a range by a number of minutes and clamps it to the day (no midnight rollover).
+     * @param {{start: number, end: number}} range
+     * @param {number} shift
+     * @returns {{start: number, end: number}}
+     */
+    const shiftRange = (range, shift) => ({
+        start: Math.max(0, Math.min(MINUTES_PER_DAY, range.start + shift)),
+        end: Math.max(0, Math.min(MINUTES_PER_DAY, range.end + shift))
+    });
+
+    /**
+     * Computes, for one day, the minutes where everyone is free and those where at least two players are.
+     * @param {Object[]} players Decoded share payloads.
+     * @param {string|number} slotKey Weekday index or "YYYY-MM-DD".
+     * @param {number} masterTzOffset
+     * @returns {{full: number[], partial: Object<number, string[]>}}
+     */
+    function getSlotAvailability(players, slotKey, masterTzOffset) {
+        const peopleByMinute = Array.from({ length: MINUTES_PER_DAY }, () => []);
+        players.forEach(player => {
+            const shift = getTimezoneShift(player, masterTzOffset);
+            (player.e[slotKey] || []).forEach(range => {
+                const { start, end } = shiftRange(range, shift);
+                for (let minute = start; minute < end; minute++) peopleByMinute[minute].push(player.n);
+            });
+        });
+
+        const full = [];
+        const partial = {};
+        peopleByMinute.forEach((names, minute) => {
+            if (names.length === players.length) full.push(minute);
+            else if (names.length >= 2) partial[minute] = names;
+        });
+        return { full, partial };
+    }
+
+    /**
+     * Builds the expandable result card for one day.
+     * @param {string} label Day title.
+     * @param {Object[]} players
+     * @param {string|number} slotKey
+     * @param {{full: number[], partial: Object}} availability
+     * @param {number} masterTzOffset
+     * @returns {HTMLElement}
+     */
+    function buildSlotCard(label, players, slotKey, availability, masterTzOffset) {
+        const { full, partial } = availability;
+        const card = document.createElement('div');
+        card.className = 'result-day' + (full.length ? ' match' : '');
+        card.onclick = () => card.classList.toggle('expanded');
+
+        let html = `<b style="font-size: 1.1em; color: #fff;">${label}</b><span class="expand-icon">▼</span><br><br>`;
+        html += full.length
+            ? `<span style="color: var(--success); font-weight:bold;">🔥 GRUPPO COMPLETO:</span> <b style="color: #fff;">${getContinuousBlocks(full).join(', ')}</b>`
+            : `<span style="color: #ff4444;">❌ Nessun orario comune per l'intero gruppo.</span>`;
+
+        html += '<div class="details-panel">';
+        const partialBlocks = getPartialBlocks(partial);
+        if (partialBlocks.length) {
+            const best = Math.max(...partialBlocks.map(block => block.people.length));
+            html += `<em style="color: #aaa;">Miglior incrocio parziale (${best} giocatori):</em><ul style="margin: 5px 0 15px 0; padding-left: 20px; color: #ccc; font-size: 0.9em;">`;
+            partialBlocks.filter(block => block.people.length === best).forEach(block => {
+                html += `<li><b style="color: #fff;">${block.time}</b>: ${block.people.map(escapeHtml).join(', ')}</li>`;
+            });
+            html += '</ul>';
+        } else if (!full.length) {
+            html += '<em style="color: #666; font-size: 0.85em;">Nessuna sovrapposizione tra i giocatori.</em><br><br>';
+        }
+
+        html += '<em style="color: #888; font-size: 0.85em; text-transform: uppercase;">Dettaglio PG:</em><ul style="margin: 5px 0; padding-left: 20px; color: #bbb; font-size: 0.9em; list-style-type: square;">';
+        players.forEach(player => {
+            const ranges = player.e[slotKey];
+            const shift = getTimezoneShift(player, masterTzOffset);
+            const text = ranges && ranges.length
+                ? ranges.map(range => { const r = shiftRange(range, shift); return `${minutesToTime(r.start)} - ${minutesToTime(r.end)}`; }).join(', ')
+                : '<span style="color:#ff4444;">Assente</span>';
+            html += `<li><b style="color: #ddd;">${escapeHtml(player.n)}</b>: <span>${text}</span></li>`;
+        });
+        card.innerHTML = html + '</ul></div>';
+        return card;
+    }
+
+    /** Decodes the pasted codes, validates them and renders the overlap results. */
+    function calculateDates() {
+        const lines = $('dmInput').value.trim().split('\n').filter(Boolean);
+        if (!lines.length) return showError('Inserisci almeno un codice generato dai giocatori.');
+
+        let players;
+        try { players = lines.map(decodeShareCode); }
+        catch (error) { return showError('Uno o più codici inseriti non sono validi o sono danneggiati.'); }
+
+        const isMonthly = players.some(player => player.m);
+        if (isMonthly && !players.every(player => player.m && player.m === players[0].m)) {
+            return showError('Attenzione: stai mescolando codici mensili e settimanali, oppure mesi diversi!');
+        }
+        if (!isMonthly) {
+            const firstWeek = players[0].d.join(',');
+            if (!players.every(player => player.d.join(',') === firstWeek)) return showError('Attenzione: Stai incrociando codici che appartengono a settimane diverse!');
+        }
+
+        let slotKeys = [0, 1, 2, 3, 4, 5, 6];
+        if (isMonthly) {
+            const [year, month] = players[0].m.split('-').map(Number);
+            slotKeys = Array.from({ length: new Date(year, month, 0).getDate() }, (_, i) => `${players[0].m}-${pad2(i + 1)}`);
+        }
+        const getLabel = key => {
+            if (!isMonthly) return `${WEEKDAYS[key]} ${players[0].d[key]}`;
+            const [year, month, day] = key.split('-').map(Number);
+            return `${WEEKDAYS[getWeekdayIndex(new Date(year, month - 1, day))]} ${pad2(day)}/${pad2(month)}/${year}`;
+        };
+
+        const results = $('dmResults');
+        results.innerHTML = '<h3 style="color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 20px;">Risultati Incrocio Sessione</h3>';
+        const masterTzOffset = new Date().getTimezoneOffset();
+        const fullGroupDays = [];
+
+        slotKeys.forEach(key => {
+            if (isMonthly && players.every(player => !(player.e[key] && player.e[key].length))) return;
+            const availability = getSlotAvailability(players, key, masterTzOffset);
+            if (availability.full.length) fullGroupDays.push(getLabel(key));
+            results.appendChild(buildSlotCard(getLabel(key), players, key, availability, masterTzOffset));
+        });
+
+        if (isMonthly) {
+            const summary = document.createElement('div');
+            summary.className = 'result-day' + (fullGroupDays.length ? ' match' : '');
+            summary.style.cursor = 'default';
+            summary.innerHTML = fullGroupDays.length
+                ? `<b style="color:var(--success)">🔥 Giorni con gruppo completo (${fullGroupDays.length}):</b><br><span style="color:#fff">${fullGroupDays.join(' · ')}</span>`
+                : '<span style="color:#ff4444">❌ Nessun giorno del mese in cui tutto il gruppo è libero.</span>';
+            results.insertBefore(summary, results.children[1]);
+        }
+
+        const exportBlock = document.createElement('div');
+        exportBlock.style.cssText = 'text-align:center;margin-top:25px;';
+        exportBlock.innerHTML = `
+            <button id="btn-export-img" onclick="exportDMImage()" class="btn-success" style="margin: 0 auto;">
+                <svg style="width:18px; height:18px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                Esporta Risultati come Immagine
+            </button>
+            <p id="exportStatusText" style="color:var(--success); font-size: 0.8em; margin-top:10px; display:none; font-weight:bold;">Immagine scaricata!</p>`;
+        results.appendChild(exportBlock);
+    }
+
+    /* ---------- 9. Master: image export ---------- */
+
+    /** Renders the results area to a PNG (html2canvas) and downloads it. */
+    function exportDMImage() {
+        const target = $('dmResultsWrapper');
+        const button = $('btn-export-img');
+        const status = $('exportStatusText');
+        const originalStyle = target.style.cssText;
+
+        button.style.display = 'none';
+        Object.assign(target.style, { backgroundColor: 'var(--card-bg)', padding: '20px', borderRadius: '10px' });
+
+        html2canvas(target, { backgroundColor: '#121212', scale: 2 })
+            .then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'D&D_Orari_Sessione.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                status.style.display = 'block';
+                setTimeout(() => { status.style.display = 'none'; }, 3000);
+            })
+            .finally(() => {
+                target.style.cssText = originalStyle;
+                button.style.display = 'flex';
+            });
+    }
+
+    /* ---------- 10. Week code converter ---------- */
+
+    /** Expands or collapses the converter panel. */
+    function toggleConverter() {
+        const isHidden = $('converterBody').classList.toggle('hidden');
+        $('converterExpandIcon').style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+
+    /**
+     * Computes the Monday-Sunday range of the week containing a date.
+     * @param {string} dateValue "YYYY-MM-DD" from a date input.
+     * @returns {{monday: Date, sunday: Date, dates: string[]}} Localized date strings in "dates".
+     */
+    function getWeekRange(dateValue) {
+        const monday = getMondayOf(new Date(dateValue));
+        const days = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
+            return date;
+        });
+        return { monday, sunday: days[6], dates: days.map(date => date.toLocaleDateString('it-IT')) };
+    }
+
+    /** Shows the Monday-Sunday range of the date picked in the converter. */
+    function updateSelectedWeekDisplay() {
+        const dateValue = $('targetWeekDate').value;
+        if (!dateValue) { $('selectedWeekDisplay').innerText = ''; return; }
+        const { monday, sunday } = getWeekRange(dateValue);
+        $('selectedWeekDisplay').innerText = `Calcolato: ${monday.toLocaleDateString('it-IT')} - ${sunday.toLocaleDateString('it-IT')}`;
+    }
+
+    /** Sets the converter's date to today. */
+    function syncConverterDatesWithCurrent() {
+        const today = new Date();
+        $('targetWeekDate').value = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+        updateSelectedWeekDisplay();
+    }
+
+    /** Re-targets an old weekly code to the chosen week and shows the new code. */
+    function convertCodeWeek() {
+        const oldCode = $('convertOldCode').value.trim();
+        if (!oldCode) return showError('Incolla un codice da convertire.');
+        const dateValue = $('targetWeekDate').value;
+        if (!dateValue) return showError('Seleziona una data per impostare la nuova settimana.');
+
+        try {
+            const data = decodeShareCode(oldCode);
+            if (data.m) return showError('Il convertitore funziona solo con i codici settimanali.');
+            data.d = getWeekRange(dateValue).dates;
+            $('convertedCodeText').innerText = encodeShareCode(data);
+            $('converterResultBlock').classList.remove('hidden');
+        } catch (error) {
+            showError('Errore durante decodifica. Verifica che il codice sia integro.');
+        }
+    }
+    </script>
+</body>
+</html>
