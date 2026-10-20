@@ -270,6 +270,16 @@
         .month-cell b{display:block;font-size:1.15em;margin-bottom:2px}
         .day-list-item{display:flex;justify-content:space-between;align-items:center;background:#0a0a0a;border:1px solid #222;border-radius:6px;padding:8px 12px;margin-bottom:6px}
         .day-list-item span.x{color:var(--danger);cursor:pointer;font-weight:bold}
+        .heat-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;font-size:.8em;text-align:center}
+        .heat-cell small{color:#ddd}
+        .heat-cell.full{border-color:var(--success);box-shadow:inset 0 0 0 1px var(--success)}
+        .heat-cell.none{opacity:.35;cursor:default;pointer-events:none}
+        .heat-cell.selected{outline:2px solid #fff}
+        .heat-legend{color:#777;font-size:.8em;margin:10px 0 0;text-align:left}
+        .slot-group{margin-top:14px;text-align:left}
+        .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+        .day-chip{background:#1a1a1a;border:1px solid #333;border-radius:14px;padding:3px 10px;font-size:.8em;color:#ddd;cursor:pointer}
+        .day-chip:hover{border-color:var(--accent);color:#fff}
     </style>
 </head>
 <body>
@@ -1146,7 +1156,7 @@
      * @param {Object[]} players Decoded share payloads.
      * @param {string|number} slotKey Weekday index or "YYYY-MM-DD".
      * @param {number} masterTzOffset
-     * @returns {{full: number[], partial: Object<number, string[]>}}
+     * @returns {{full: number[], partial: Object<number, string[]>, maxCount: number}} maxCount is the highest number of players free at the same time.
      */
     function getSlotAvailability(players, slotKey, masterTzOffset) {
         const peopleByMinute = Array.from({ length: MINUTES_PER_DAY }, () => []);
@@ -1160,11 +1170,13 @@
 
         const full = [];
         const partial = {};
+        let maxCount = 0;
         peopleByMinute.forEach((names, minute) => {
+            maxCount = Math.max(maxCount, names.length);
             if (names.length === players.length) full.push(minute);
             else if (names.length >= 2) partial[minute] = names;
         });
-        return { full, partial };
+        return { full, partial, maxCount };
     }
 
     /**
@@ -1213,6 +1225,84 @@
         return card;
     }
 
+    /**
+     * Renders the monthly results: a summary of full-group days (or the best alternative),
+     * a heat calendar (players free at the same time / total) and a detail card for the selected day.
+     * @param {HTMLElement} container
+     * @param {Object[]} players Decoded monthly payloads.
+     * @param {string[]} slotKeys "YYYY-MM-DD" keys of the month.
+     * @param {function(string): string} getLabel Day label builder.
+     * @param {number} masterTzOffset
+     */
+    function renderMonthlyResults(container, players, slotKeys, getLabel, masterTzOffset) {
+        const total = players.length;
+        const days = slotKeys.map(key => ({ key, label: getLabel(key), availability: getSlotAvailability(players, key, masterTzOffset) }));
+        const fullDays = days.filter(day => day.availability.full.length);
+        const best = days.reduce((top, day) => day.availability.maxCount > (top ? top.availability.maxCount : 0) ? day : top, null);
+
+        const summary = document.createElement('div');
+        summary.className = 'result-day' + (fullDays.length ? ' match' : '');
+        summary.style.cursor = 'default';
+        const chipLabel = key => {
+            const [y, m, d] = key.split('-').map(Number);
+            return `${WEEKDAYS[getWeekdayIndex(new Date(y, m - 1, d))].slice(0, 3)} ${d}`;
+        };
+        const groups = new Map();
+        fullDays.forEach(day => {
+            const blocks = getContinuousBlocks(day.availability.full).join(', ');
+            if (!groups.has(blocks)) groups.set(blocks, { blocks, minutes: day.availability.full.length, days: [] });
+            groups.get(blocks).days.push(day.key);
+        });
+        const sortedGroups = [...groups.values()].sort((a, b) => b.minutes - a.minutes || b.days.length - a.days.length);
+        summary.innerHTML = fullDays.length
+            ? `<b style="color:var(--success)">🔥 Giorni con gruppo completo (${fullDays.length}):</b>` + sortedGroups.map(group => `<div class="slot-group"><div><b style="color:#fff">${group.blocks}</b> <span style="color:#888;font-size:.85em">· ${group.days.length} ${group.days.length === 1 ? 'giorno' : 'giorni'}</span></div><div class="chip-row">${group.days.map(key => `<span class="day-chip" data-key="${key}">${chipLabel(key)}</span>`).join('')}</div></div>`).join('')
+            : '<span style="color:#ff4444">❌ Nessun giorno del mese in cui tutto il gruppo è libero.</span>'
+              + (best && best.availability.maxCount >= 2 ? `<br><span style="color:#ccc">Miglior alternativa: <b style="color:#fff">${best.label}</b> (${best.availability.maxCount}/${total} giocatori)</span>` : '');
+        container.appendChild(summary);
+
+        const [year, month] = players[0].m.split('-').map(Number);
+        let gridHtml = WEEKDAYS.map(name => `<div class="month-head">${name.slice(0, 3)}</div>`).join('');
+        gridHtml += '<div class="month-cell empty"></div>'.repeat(getWeekdayIndex(new Date(year, month - 1, 1)));
+        days.forEach(({ key, availability }) => {
+            const { maxCount, full } = availability;
+            const shade = maxCount ? ` style="background:rgba(255,106,0,${(0.15 + 0.6 * maxCount / total).toFixed(2)})"` : '';
+            gridHtml += `<div class="month-cell heat-cell${full.length ? ' full' : ''}${maxCount ? '' : ' none'}" data-key="${key}"${shade}><b>${Number(key.slice(-2))}</b><small>${maxCount}/${total}</small></div>`;
+        });
+        const grid = document.createElement('div');
+        grid.className = 'month-grid';
+        grid.style.marginTop = '15px';
+        grid.innerHTML = gridHtml;
+
+        const legend = document.createElement('p');
+        legend.className = 'heat-legend';
+        legend.textContent = 'Ogni giorno mostra i giocatori liberi nello stesso momento sul totale. Bordo verde = gruppo completo. Tocca un giorno per i dettagli.';
+
+        const detail = document.createElement('div');
+        const showDay = key => {
+            const day = days.find(item => item.key === key);
+            const card = buildSlotCard(day.label, players, key, day.availability, masterTzOffset);
+            card.classList.add('expanded');
+            detail.innerHTML = '';
+            detail.appendChild(card);
+            grid.querySelectorAll('.heat-cell').forEach(cell => cell.classList.toggle('selected', cell.dataset.key === key));
+        };
+        grid.onclick = event => {
+            const cell = event.target.closest('.heat-cell');
+            if (cell && !cell.classList.contains('none')) showDay(cell.dataset.key);
+        };
+
+        summary.onclick = event => {
+            const chip = event.target.closest('.day-chip');
+            if (!chip) return;
+            showDay(chip.dataset.key);
+            detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+
+        container.append(grid, legend, detail);
+        const initial = fullDays[0] || best;
+        if (initial && initial.availability.maxCount) showDay(initial.key);
+    }
+
     /** Decodes the pasted codes, validates them and renders the overlap results. */
     function calculateDates() {
         const lines = $('dmInput').value.trim().split('\n').filter(Boolean);
@@ -1237,7 +1327,7 @@
             slotKeys = Array.from({ length: new Date(year, month, 0).getDate() }, (_, i) => `${players[0].m}-${pad2(i + 1)}`);
         }
         const getLabel = key => {
-            if (!isMonthly) return `${WEEKDAYS[key]} ${players[0].d[key]}`;
+            if (!isMonthly) return `${WEEKDAYS[key]} ${escapeHtml(players[0].d[key])}`;
             const [year, month, day] = key.split('-').map(Number);
             return `${WEEKDAYS[getWeekdayIndex(new Date(year, month - 1, day))]} ${pad2(day)}/${pad2(month)}/${year}`;
         };
@@ -1245,24 +1335,8 @@
         const results = $('dmResults');
         results.innerHTML = '<h3 style="color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 20px;">Risultati Incrocio Sessione</h3>';
         const masterTzOffset = new Date().getTimezoneOffset();
-        const fullGroupDays = [];
-
-        slotKeys.forEach(key => {
-            if (isMonthly && players.every(player => !(player.e[key] && player.e[key].length))) return;
-            const availability = getSlotAvailability(players, key, masterTzOffset);
-            if (availability.full.length) fullGroupDays.push(getLabel(key));
-            results.appendChild(buildSlotCard(getLabel(key), players, key, availability, masterTzOffset));
-        });
-
-        if (isMonthly) {
-            const summary = document.createElement('div');
-            summary.className = 'result-day' + (fullGroupDays.length ? ' match' : '');
-            summary.style.cursor = 'default';
-            summary.innerHTML = fullGroupDays.length
-                ? `<b style="color:var(--success)">🔥 Giorni con gruppo completo (${fullGroupDays.length}):</b><br><span style="color:#fff">${fullGroupDays.join(' · ')}</span>`
-                : '<span style="color:#ff4444">❌ Nessun giorno del mese in cui tutto il gruppo è libero.</span>';
-            results.insertBefore(summary, results.children[1]);
-        }
+        if (isMonthly) renderMonthlyResults(results, players, slotKeys, getLabel, masterTzOffset);
+        else slotKeys.forEach(key => results.appendChild(buildSlotCard(getLabel(key), players, key, getSlotAvailability(players, key, masterTzOffset), masterTzOffset)));
 
         const exportBlock = document.createElement('div');
         exportBlock.style.cssText = 'text-align:center;margin-top:25px;';
