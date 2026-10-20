@@ -20,6 +20,10 @@ A lightweight web app to coordinate Dungeons & Dragons sessions: players share t
   Day calendar for any upcoming month: several ranges per day, a shortcut for "every same weekday of the month", and removal of single ranges from the day dialog. It works alongside the weekly mode.
   *Calendario per qualsiasi mese futuro: più fasce per giorno, scorciatoia "tutti i [giorno] del mese" e rimozione delle singole fasce dalla finestra del giorno. Convive con la modalità settimanale.*
 
+- **Bilingual interface** · *Interfaccia bilingue*
+  Italian and English, switchable at runtime with the IT/EN selector (top right). The choice is remembered; the first time the browser language is used. Share codes do not depend on the language, so players can mix languages in the same group.
+  *Italiano e inglese, con cambio lingua immediato dal selettore IT/EN in alto a destra. La scelta viene ricordata; la prima volta si usa la lingua del browser. I codici non dipendono dalla lingua, quindi i giocatori di uno stesso gruppo possono usare lingue diverse.*
+
 - **No server, no account** · *Nessun server, nessun account*
   Availability travels as a share link or a text code; everything is stored in the browser.
   *La disponibilità viaggia come link o codice di testo; tutto è salvato nel browser.*
@@ -56,6 +60,7 @@ A lightweight web app to coordinate Dungeons & Dragons sessions: players share t
 
 ## Usage / Utilizzo
 
+0. **Language** · *Lingua*: pick **IT** or **EN** at the top right of the page. · *scegli **IT** o **EN** in alto a destra.*
 1. **Players** · *Giocatori*: open the page, type a name, choose **Settimanale** or **Mensile**, click a day to add time ranges, then press **Invia Disponibilità** and send the link (or the text code) to the Master.
    *apri la pagina, scrivi un nome, scegli la modalità, clicca un giorno per aggiungere le fasce, poi premi **Invia Disponibilità** e manda il link (o il codice) al Master.*
 2. **Master**: open the shared links, or paste the codes (one per line) in the Master screen and press **Incrocia Orari**. The Master view opens by tapping the title 7 times, with `Ctrl+Shift+M`, or by opening a shared link.
@@ -87,7 +92,7 @@ The script of `index.html` is documented with JSDoc and organised in 10 sections
 
 | # | Section · *Sezione* |
 |---|---|
-| 1 | Constants, state and generic helpers · *Costanti, stato e utilità* |
+| 1 | Constants, state, localization and generic helpers · *Costanti, stato, localizzazione e utilità* |
 | 2 | Startup and Master view switching · *Avvio e cambio vista Master* |
 | 3 | Persistence · *Salvataggio* |
 | 4 | Weekly calendar · *Calendario settimanale* |
@@ -126,8 +131,6 @@ The app is static: open `index.html` locally or publish the repository with **Gi
   *Nel codice non ci sono segreti, chiavi o credenziali.*
 - Player names and dates read from pasted codes are HTML-escaped before being displayed, so a crafted code cannot inject markup into the Master view.
   *I nomi e le date letti dai codici incollati vengono protetti prima di essere mostrati, così un codice costruito ad arte non può iniettare HTML nella vista del Master.*
-
----
 
 ## License / Licenza
 

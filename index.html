@@ -146,7 +146,7 @@
         }
         .event-block:hover { background-color: var(--danger); border-color: #ff3d00; }
         .event-block:hover span { display: none; }
-        .event-block:hover::after { content: "RIMUOVI"; letter-spacing: 1px; }
+        .event-block:hover::after { content: attr(data-remove-label); letter-spacing: 1px; }
 
         @keyframes fadeInSimple { from { opacity: 0; } to { opacity: 1; } }
         @keyframes modalShow { from { opacity: 0; transform: scale(0.95) translateY(-10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
@@ -280,18 +280,26 @@
         .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
         .day-chip{background:#1a1a1a;border:1px solid #333;border-radius:14px;padding:3px 10px;font-size:.8em;color:#ddd;cursor:pointer}
         .day-chip:hover{border-color:var(--accent);color:#fff}
+        .lang-switch{display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px}
+        .lang-switch button{width:auto;padding:5px 12px;font-size:12px;background:#222;color:#aaa;letter-spacing:1px}
+        .lang-switch button.active{background:var(--accent);color:#050505}
     </style>
 </head>
 <body>
 
+    <div class="lang-switch" role="group" aria-label="Language">
+        <button id="langItBtn" onclick="setLanguage('it')">IT</button>
+        <button id="langEnBtn" onclick="setLanguage('en')">EN</button>
+    </div>
+
     <h1 onclick="handleSecretTap()">D&D Scheduler</h1>
 
     <div id="playerTab" class="container">
-        <input type="text" id="playerName" class="main-input" placeholder="Il tuo Nome o Nome PG" oninput="saveDataAndCheck()">
+        <input type="text" id="playerName" class="main-input" placeholder="Il tuo Nome o Nome PG" data-i18n-placeholder="playerNamePlaceholder" oninput="saveDataAndCheck()">
 
         <div class="mode-toggle">
-            <button id="modeWeekBtn" onclick="setMode('week')">Settimanale</button>
-            <button id="modeMonthBtn" onclick="setMode('month')">Mensile</button>
+            <button data-i18n="modeWeek" id="modeWeekBtn" onclick="setMode('week')">Settimanale</button>
+            <button data-i18n="modeMonth" id="modeMonthBtn" onclick="setMode('month')">Mensile</button>
         </div>
         <div id="monthWrapper" class="hidden">
             <div class="month-nav">
@@ -300,7 +308,7 @@
                 <button onclick="changeMonth(1)">▶</button>
             </div>
             <div class="month-grid" id="monthGrid"></div>
-            <p style="color:#666;font-size:.8em">Tocca un giorno per aggiungere o rimuovere fasce orarie.</p>
+            <p data-i18n="monthHint" style="color:#666;font-size:.8em">Tocca un giorno per aggiungere o rimuovere fasce orarie.</p>
         </div>
         <div class="calendar-wrapper" id="calWrapper">
             <div class="time-labels" id="timeLabels"></div>
@@ -309,30 +317,30 @@
         <div class="btn-group">
             <button id="resetBtn" class="btn-danger" onclick="resetCalendar()">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                Svuota Calendario
+                <span data-i18n="resetCalendar">Svuota Calendario</span>
             </button>
             <button id="exportBtn" onclick="tryExportCode()" disabled>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                Invia Disponibilità
+                <span data-i18n="sendAvailability">Invia Disponibilità</span>
             </button>
         </div>
 
         <div id="exportResult" class="hidden">
-            <h3 style="margin-top:0; color: var(--success); font-size: 1.2em; border-bottom: 1px solid #333; padding-bottom: 10px;">✅ Dati Pronti!</h3>
-            <p style="color: #ccc; font-size: 0.9em; text-align: left; margin-bottom: 10px; font-weight: bold;">Condividi questo link con il Master:</p>
+            <h3 data-i18n="dataReady" style="margin-top:0; color: var(--success); font-size: 1.2em; border-bottom: 1px solid #333; padding-bottom: 10px;">✅ Dati Pronti!</h3>
+            <p data-i18n="shareLinkLabel" style="color: #ccc; font-size: 0.9em; text-align: left; margin-bottom: 10px; font-weight: bold;">Condividi questo link con il Master:</p>
 
             <div style="position: relative; margin-bottom: 20px;">
                 <input type="text" id="urlOutput" class="main-input" style="margin-bottom: 0; padding-right: 50px; font-size: 0.85em; font-family: monospace;" readonly onclick="this.select()">
-                <button class="copy-icon-btn" id="urlCopyBtn" onclick="copyToClipboard('urlOutput', true)" title="Copia Link">
+                <button class="copy-icon-btn" id="urlCopyBtn" onclick="copyToClipboard('urlOutput', true)" title="Copia Link" data-i18n-title="copyLink">
                     <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                 </button>
             </div>
 
             <details style="text-align: left; border-top: 1px dashed #333; padding-top: 15px;">
-                <summary style="cursor: pointer; color: #888; font-size: 0.85em; user-select: none;">Oppure usa il codice testuale classico (Pannello DM Base)</summary>
+                <summary data-i18n="classicCode" style="cursor: pointer; color: #888; font-size: 0.85em; user-select: none;">Oppure usa il codice testuale classico (Pannello DM Base)</summary>
                 <div style="position: relative; margin-top: 10px;">
                     <strong id="codeOutput" class="code-output-text" style="padding-right: 50px;"></strong>
-                    <button class="copy-icon-btn" id="mainCopyBtn" onclick="copyToClipboard('codeOutput', false)" title="Copia Codice" style="top: 10px;">
+                    <button class="copy-icon-btn" id="mainCopyBtn" onclick="copyToClipboard('codeOutput', false)" title="Copia Codice" data-i18n-title="copyCode" style="top: 10px;">
                         <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                     </button>
                 </div>
@@ -346,10 +354,10 @@
             <h3 style="margin:0 0 20px 0; color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px;" id="modalTitle">Orario</h3>
 
             <div class="all-day-container">
-                <label><input type="checkbox" id="allDayCheck" onchange="toggleAllDay()"> Tutto il giorno</label>
+                <label><input type="checkbox" id="allDayCheck" onchange="toggleAllDay()"> <span data-i18n="allDay">Tutto il giorno</span></label>
             </div>
 
-            <label style="font-size: 0.85em; color: #aaa;">Inizio (Da):</label>
+            <label data-i18n="startLabel" style="font-size: 0.85em; color: #aaa;">Inizio (Da):</label>
             <div class="time-select-group">
                 <div class="custom-select">
                     <div class="select-selected">
@@ -368,7 +376,7 @@
                 </div>
             </div>
 
-            <label style="font-size: 0.85em; color: #aaa;">Fine (A):</label>
+            <label data-i18n="endLabel" style="font-size: 0.85em; color: #aaa;">Fine (A):</label>
             <div class="time-select-group">
                 <div class="custom-select">
                     <div class="select-selected">
@@ -389,12 +397,12 @@
 
             <div id="dayEventsList"></div>
             <div class="multi-day-section">
-                <span style="font-size: 0.85em; color: var(--accent); font-weight: bold; text-transform: uppercase;">Applica orario anche a:</span>
+                <span data-i18n="applyAlsoTo" style="font-size: 0.85em; color: var(--accent); font-weight: bold; text-transform: uppercase;">Applica orario anche a:</span>
                 <div class="multi-day-grid" id="multiDayGrid"></div>
             </div>
 
             <div style="text-align: center; margin-top: 25px;">
-                <button onclick="saveEvent()" style="width: 100%;">Salva Disponibilità</button>
+                <button data-i18n="saveAvailability" onclick="saveEvent()" style="width: 100%;">Salva Disponibilità</button>
             </div>
         </div>
     </div>
@@ -402,11 +410,11 @@
     <div id="confirmModal" class="modal hidden" onclick="if(event.target === this) closeConfirmModal()">
         <div class="modal-content" style="text-align: center;">
             <span class="close-x" onclick="closeConfirmModal()">&times;</span>
-            <h3 style="color: var(--accent); margin-top: 0;">⚠️ CONFERMA ASSENZA</h3>
+            <h3 data-i18n="confirmAbsenceTitle" style="color: var(--accent); margin-top: 0;">⚠️ CONFERMA ASSENZA</h3>
             <p id="emptyDaysMessage" style="font-size: 0.95em; line-height: 1.5; margin-bottom: 25px; color: #ccc;"></p>
             <div class="btn-group">
-                <button onclick="proceedExport()" style="flex: 1;">Procedi</button>
-                <button class="btn-danger" onclick="closeConfirmModal()" style="flex: 1;">Annulla</button>
+                <button data-i18n="proceed" onclick="proceedExport()" style="flex: 1;">Procedi</button>
+                <button data-i18n="cancel" class="btn-danger" onclick="closeConfirmModal()" style="flex: 1;">Annulla</button>
             </div>
         </div>
     </div>
@@ -414,18 +422,18 @@
     <div id="errorModal" class="modal hidden" onclick="if(event.target === this) closeErrorModal()">
         <div class="modal-content" style="text-align: center; padding-bottom: 20px;">
             <span class="close-x" onclick="closeErrorModal()">&times;</span>
-            <h3 style="color: var(--danger); margin-top: 0;">⚠️ ERRORE</h3>
+            <h3 data-i18n="errorTitle" style="color: var(--danger); margin-top: 0;">⚠️ ERRORE</h3>
             <p id="errorMessage" style="font-size: 0.95em; line-height: 1.4; margin: 0; padding-bottom: 10px;"></p>
         </div>
     </div>
 
     <div id="dmTab" class="container hidden">
-        <h2 style="color: var(--accent); text-transform: uppercase; font-size: 1.6rem; letter-spacing: 1px;">Schermo del Master</h2>
-        <textarea id="dmInput" class="dm-textarea" placeholder="Incolla qui i codici o i link ricevuti dai giocatori (uno per riga)..." oninput="localStorage.setItem('dmCodesText', this.value)" style="height: 140px;"></textarea>
+        <h2 data-i18n="masterScreen" style="color: var(--accent); text-transform: uppercase; font-size: 1.6rem; letter-spacing: 1px;">Schermo del Master</h2>
+        <textarea id="dmInput" class="dm-textarea" placeholder="Incolla qui i codici o i link ricevuti dai giocatori (uno per riga)..." data-i18n-placeholder="dmPlaceholder" oninput="localStorage.setItem('dmCodesText', this.value)" style="height: 140px;"></textarea>
 
         <div class="btn-group">
-            <button class="btn-danger" onclick="clearDMCodes()" style="width: auto;">Svuota</button>
-            <button onclick="calculateDates()" style="flex: 1; max-width: 350px;">Incrocia Orari</button>
+            <button data-i18n="clear" class="btn-danger" onclick="clearDMCodes()" style="width: auto;">Svuota</button>
+            <button data-i18n="matchSchedules" onclick="calculateDates()" style="flex: 1; max-width: 350px;">Incrocia Orari</button>
         </div>
 
         <div id="dmResultsWrapper" style="margin-top: 20px;">
@@ -434,31 +442,31 @@
 
         <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 25px; text-align: left;">
             <div onclick="toggleConverter()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; background: #0a0a0a; padding: 15px; border-radius: 8px;">
-                <h3 style="color: #aaa; text-transform: uppercase; margin: 0; font-size: 1.1rem;">Strumenti Aggiuntivi: Convertitore Settimana</h3>
+                <h3 data-i18n="converterTitle" style="color: #aaa; text-transform: uppercase; margin: 0; font-size: 1.1rem;">Strumenti Aggiuntivi: Convertitore Settimana</h3>
                 <span id="converterExpandIcon" style="color: var(--accent); font-size: 1.2em; transition: transform 0.3s; pointer-events: none;">▼</span>
             </div>
 
             <div id="converterBody" class="hidden" style="margin-top: 15px; animation: fadeInSimple 0.3s ease; padding: 15px; border: 1px solid #222; border-radius: 8px; background: #080808;">
-                <p style="color: #888; font-size: 0.9em; margin-top: 0;">Aggiorna un codice obsoleto generato in una settimana precedente per riutilizzarlo nella settimana corrente.</p>
-                <input type="text" id="convertOldCode" class="main-input" placeholder="Incolla qui il vecchio codice..." style="max-width: 100%; text-align: left; margin-bottom: 15px; font-size: 0.95em;">
+                <p data-i18n="converterDescription" style="color: #888; font-size: 0.9em; margin-top: 0;">Aggiorna un codice obsoleto generato in una settimana precedente per riutilizzarlo nella settimana corrente.</p>
+                <input type="text" id="convertOldCode" class="main-input" placeholder="Incolla qui il vecchio codice..." data-i18n-placeholder="convertPlaceholder" style="max-width: 100%; text-align: left; margin-bottom: 15px; font-size: 0.95em;">
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <input type="date" id="targetWeekDate" class="main-input" style="max-width: 180px; margin-bottom: 0; padding: 10px;" onchange="updateSelectedWeekDisplay()">
                         <span id="selectedWeekDisplay" style="color: var(--accent); font-size: 0.85em; font-weight: bold;"></span>
                     </div>
-                    <button onclick="syncConverterDatesWithCurrent()" class="btn-danger" style="padding: 10px 15px; font-size: 12px; margin: 0;">Usa Settimana Attuale</button>
+                    <button data-i18n="useCurrentWeek" onclick="syncConverterDatesWithCurrent()" class="btn-danger" style="padding: 10px 15px; font-size: 12px; margin: 0;">Usa Settimana Attuale</button>
                 </div>
 
                 <div style="text-align: right;">
-                    <button onclick="convertCodeWeek()">Converti e Genera</button>
+                    <button data-i18n="convertAndGenerate" onclick="convertCodeWeek()">Converti e Genera</button>
                 </div>
 
                 <div id="converterResultBlock" class="converter-result hidden">
-                    <button class="copy-icon-btn" id="converterCopyBtn" onclick="copyToClipboard('convertedCodeText', false)" title="Copia Codice">
+                    <button class="copy-icon-btn" id="converterCopyBtn" onclick="copyToClipboard('convertedCodeText', false)" title="Copia Codice" data-i18n-title="copyCode">
                         <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                     </button>
-                    <p style="color: var(--success); font-size: 0.85em; margin-top: 0; font-weight: bold;">✓ Conversione completata!</p>
+                    <p data-i18n="conversionDone" style="color: var(--success); font-size: 0.85em; margin-top: 0; font-weight: bold;">✓ Conversione completata!</p>
                     <strong id="convertedCodeText" class="code-output-text"></strong>
                 </div>
             </div>
@@ -492,15 +500,21 @@
      * Range = { start, end } in minutes from midnight (0-1440).
      * A code with "m" is monthly, a code with "d" is weekly.
      *
-     * STORAGE (localStorage keys, unchanged from previous versions)
-     * dndSchedulerSave, dndMonthSave, dndMode, dmCodesText.
+     * STORAGE (localStorage keys)
+     * dndSchedulerSave, dndMonthSave, dndMode, dmCodesText, dndLang.
+     *
+     * LANGUAGES
+     * Italian and English. Static texts carry data-i18n / data-i18n-placeholder /
+     * data-i18n-title attributes, dynamic texts go through t(key, params). The language
+     * is chosen with the IT/EN switch (saved in localStorage, default: browser language).
+     * Share codes do not depend on the language, so players can mix languages freely.
      *
      * MASTER VIEW
      * Opened by tapping the title 7 times quickly, Ctrl+Shift+M, or by opening a
      * shared link (?data=...).
      *
      * SECTIONS
-     * 1. Constants, state and generic helpers
+     * 1. Constants, state, localization and generic helpers
      * 2. Application startup and Master view switching
      * 3. Persistence
      * 4. Weekly calendar
@@ -512,15 +526,13 @@
      * 10. Week code converter
      */
 
-    /* ---------- 1. Constants, state and helpers ---------- */
+    /* ---------- 1. Constants, state, localization and helpers ---------- */
 
-    const WEEKDAYS = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-    const MONTH_NAMES = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     const MINUTES_PER_DAY = 1440;
     const HOUR_HEIGHT_PX = 40;
     const SECRET_TAP_TARGET = 7;
     const SECRET_TAP_WINDOW_MS = 500;
-    const STORAGE_KEYS = { week: 'dndSchedulerSave', month: 'dndMonthSave', mode: 'dndMode', masterCodes: 'dmCodesText' };
+    const STORAGE_KEYS = { week: 'dndSchedulerSave', month: 'dndMonthSave', mode: 'dndMode', masterCodes: 'dmCodesText', lang: 'dndLang' };
     const TIME_FIELD_IDS = ['startHour', 'startMinute', 'endHour', 'endMinute'];
 
     let weeklyEvents = createEmptyWeek();
@@ -539,6 +551,214 @@
      * @returns {HTMLElement}
      */
     const $ = id => document.getElementById(id);
+
+    const WEEKDAY_NAMES = {
+        it: ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'],
+        en: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    };
+    const MONTH_NAME_LISTS = {
+        it: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
+        en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    };
+
+    const TRANSLATIONS = {
+        it: {
+            playerNamePlaceholder: 'Il tuo Nome o Nome PG',
+            modeWeek: 'Settimanale',
+            modeMonth: 'Mensile',
+            monthHint: 'Tocca un giorno per aggiungere o rimuovere fasce orarie.',
+            resetCalendar: 'Svuota Calendario',
+            sendAvailability: 'Invia Disponibilità',
+            dataReady: '✅ Dati Pronti!',
+            shareLinkLabel: 'Condividi questo link con il Master:',
+            copyLink: 'Copia Link',
+            copyCode: 'Copia Codice',
+            classicCode: 'Oppure usa il codice testuale classico (Pannello DM Base)',
+            allDay: 'Tutto il giorno',
+            startLabel: 'Inizio (Da):',
+            endLabel: 'Fine (A):',
+            applyAlsoTo: 'Applica orario anche a:',
+            saveAvailability: 'Salva Disponibilità',
+            confirmAbsenceTitle: '⚠️ CONFERMA ASSENZA',
+            proceed: 'Procedi',
+            cancel: 'Annulla',
+            errorTitle: '⚠️ ERRORE',
+            masterScreen: 'Schermo del Master',
+            dmPlaceholder: 'Incolla qui i codici o i link ricevuti dai giocatori (uno per riga)...',
+            clear: 'Svuota',
+            matchSchedules: 'Incrocia Orari',
+            converterTitle: 'Strumenti Aggiuntivi: Convertitore Settimana',
+            converterDescription: 'Aggiorna un codice obsoleto generato in una settimana precedente per riutilizzarlo nella settimana corrente.',
+            convertPlaceholder: 'Incolla qui il vecchio codice...',
+            useCurrentWeek: 'Usa Settimana Attuale',
+            convertAndGenerate: 'Converti e Genera',
+            conversionDone: '✓ Conversione completata!',
+            removeBlock: 'RIMUOVI',
+            confirmResetWeek: 'Vuoi davvero svuotare tutti gli orari impostati per questa settimana?',
+            confirmResetMonth: 'Vuoi davvero svuotare tutte le disponibilità di questo mese?',
+            enterValidTimes: 'Inserisci orari validi.',
+            invalidTime: 'Orario non valido.',
+            endAfterStart: "L'ora di fine deve essere successiva all'inizio.",
+            everyWeekday: 'Tutti i {day} del mese',
+            existingRanges: 'FASCE GIÀ INSERITE',
+            removeRange: '✕ rimuovi',
+            absentMonth: 'Stai comunicando che <b>non sei disponibile in nessun giorno di {month}</b>. Confermi?',
+            absentWeek: 'Stai comunicando che <b>non ci sei per tutta la settimana</b>. Confermi?',
+            absentDays: 'Stai segnalando un\'assenza totale per: <br><br><b style="color:var(--accent);">{days}</b><br><br>Procedo?',
+            confirmClearMaster: "Svuotare l'area di testo del Master?",
+            fullGroup: '🔥 GRUPPO COMPLETO:',
+            noCommonTime: "❌ Nessun orario comune per l'intero gruppo.",
+            bestPartial: 'Miglior incrocio parziale ({count} giocatori):',
+            noOverlap: 'Nessuna sovrapposizione tra i giocatori.',
+            playerDetail: 'Dettaglio PG:',
+            absent: 'Assente',
+            fullGroupDays: '🔥 Giorni con gruppo completo ({count}):',
+            dayOne: 'giorno',
+            dayMany: 'giorni',
+            noFullDay: '❌ Nessun giorno del mese in cui tutto il gruppo è libero.',
+            bestAlternative: 'Miglior alternativa: <b style="color:#fff">{label}</b> ({count}/{total} giocatori)',
+            heatLegend: 'Ogni giorno mostra i giocatori liberi nello stesso momento sul totale. Tocca un giorno per i dettagli.',
+            enterAtLeastOneCode: 'Inserisci almeno un codice generato dai giocatori.',
+            invalidCodes: 'Uno o più codici inseriti non sono validi o sono danneggiati.',
+            mixedCodes: 'Attenzione: stai mescolando codici mensili e settimanali, oppure mesi diversi!',
+            differentWeeks: 'Attenzione: Stai incrociando codici che appartengono a settimane diverse!',
+            resultsTitle: 'Risultati Incrocio Sessione',
+            exportImage: 'Esporta Risultati come Immagine',
+            imageDownloaded: 'Immagine scaricata!',
+            imageFileName: 'D&D_Orari_Sessione.png',
+            calculated: 'Calcolato: {from} - {to}',
+            pasteCodeToConvert: 'Incolla un codice da convertire.',
+            selectDateForWeek: 'Seleziona una data per impostare la nuova settimana.',
+            convertOnlyWeekly: 'Il convertitore funziona solo con i codici settimanali.',
+            decodeError: 'Errore durante decodifica. Verifica che il codice sia integro.'
+        },
+        en: {
+            playerNamePlaceholder: 'Your name or character name',
+            modeWeek: 'Weekly',
+            modeMonth: 'Monthly',
+            monthHint: 'Tap a day to add or remove time ranges.',
+            resetCalendar: 'Clear Calendar',
+            sendAvailability: 'Send Availability',
+            dataReady: '✅ Data Ready!',
+            shareLinkLabel: 'Share this link with the Master:',
+            copyLink: 'Copy Link',
+            copyCode: 'Copy Code',
+            classicCode: 'Or use the classic text code (Basic DM Panel)',
+            allDay: 'All day',
+            startLabel: 'Start (From):',
+            endLabel: 'End (To):',
+            applyAlsoTo: 'Apply time also to:',
+            saveAvailability: 'Save Availability',
+            confirmAbsenceTitle: '⚠️ CONFIRM ABSENCE',
+            proceed: 'Proceed',
+            cancel: 'Cancel',
+            errorTitle: '⚠️ ERROR',
+            masterScreen: 'Master Screen',
+            dmPlaceholder: 'Paste here the codes or links received from the players (one per line)...',
+            clear: 'Clear',
+            matchSchedules: 'Match Schedules',
+            converterTitle: 'Extra Tools: Week Converter',
+            converterDescription: 'Update an outdated code generated in a previous week so you can reuse it in the current week.',
+            convertPlaceholder: 'Paste the old code here...',
+            useCurrentWeek: 'Use Current Week',
+            convertAndGenerate: 'Convert and Generate',
+            conversionDone: '✓ Conversion completed!',
+            removeBlock: 'REMOVE',
+            confirmResetWeek: 'Do you really want to clear all the times set for this week?',
+            confirmResetMonth: 'Do you really want to clear all the availability of this month?',
+            enterValidTimes: 'Enter valid times.',
+            invalidTime: 'Invalid time.',
+            endAfterStart: 'The end time must be later than the start time.',
+            everyWeekday: 'Every {day} of the month',
+            existingRanges: 'EXISTING RANGES',
+            removeRange: '✕ remove',
+            absentMonth: 'You are saying that you are <b>not available on any day of {month}</b>. Confirm?',
+            absentWeek: 'You are saying that you are <b>away for the whole week</b>. Confirm?',
+            absentDays: 'You are reporting a total absence on: <br><br><b style="color:var(--accent);">{days}</b><br><br>Proceed?',
+            confirmClearMaster: "Clear the Master's text area?",
+            fullGroup: '🔥 FULL GROUP:',
+            noCommonTime: '❌ No common time for the whole group.',
+            bestPartial: 'Best partial overlap ({count} players):',
+            noOverlap: 'No overlap between the players.',
+            playerDetail: 'Player details:',
+            absent: 'Absent',
+            fullGroupDays: '🔥 Days with the full group ({count}):',
+            dayOne: 'day',
+            dayMany: 'days',
+            noFullDay: '❌ No day of the month when the whole group is free.',
+            bestAlternative: 'Best alternative: <b style="color:#fff">{label}</b> ({count}/{total} players)',
+            heatLegend: 'Each day shows the players free at the same time out of the total. Tap a day for details.',
+            enterAtLeastOneCode: 'Enter at least one code generated by the players.',
+            invalidCodes: 'One or more of the codes entered are invalid or corrupted.',
+            mixedCodes: 'Warning: you are mixing monthly and weekly codes, or different months!',
+            differentWeeks: 'Warning: you are matching codes that belong to different weeks!',
+            resultsTitle: 'Session Matching Results',
+            exportImage: 'Export Results as Image',
+            imageDownloaded: 'Image downloaded!',
+            imageFileName: 'D&D_Session_Times.png',
+            calculated: 'Calculated: {from} - {to}',
+            pasteCodeToConvert: 'Paste a code to convert.',
+            selectDateForWeek: 'Select a date to set the new week.',
+            convertOnlyWeekly: 'The converter only works with weekly codes.',
+            decodeError: 'Error while decoding. Check that the code is intact.'
+        }
+    };
+
+    let lang = detectInitialLanguage();
+
+    /**
+     * Detects the initial language: saved choice first, then the browser language (Italian or English).
+     * @returns {'it'|'en'}
+     */
+    function detectInitialLanguage() {
+        const saved = localStorage.getItem(STORAGE_KEYS.lang);
+        if (TRANSLATIONS[saved]) return saved;
+        return (navigator.language || 'en').toLowerCase().startsWith('it') ? 'it' : 'en';
+    }
+
+    /**
+     * Translates a key into the current language, falling back to Italian and then to the key itself.
+     * Placeholders such as {name} are replaced with the given params.
+     * @param {string} key
+     * @param {Object<string, string|number>} [params]
+     * @returns {string}
+     */
+    function t(key, params = {}) {
+        const text = TRANSLATIONS[lang][key] ?? TRANSLATIONS.it[key] ?? key;
+        return text.replace(/\{(\w+)\}/g, (match, name) => name in params ? params[name] : match);
+    }
+
+    /** @returns {string[]} Weekday names in the current language, Monday first. */
+    const getWeekdays = () => WEEKDAY_NAMES[lang];
+
+    /** @returns {string[]} Month names in the current language. */
+    const getMonthNames = () => MONTH_NAME_LISTS[lang];
+
+    /** Applies the current language to every element tagged with data-i18n, data-i18n-placeholder or data-i18n-title. */
+    function applyStaticTranslations() {
+        document.documentElement.lang = lang;
+        document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+        $('langItBtn').classList.toggle('active', lang === 'it');
+        $('langEnBtn').classList.toggle('active', lang === 'en');
+    }
+
+    /**
+     * Switches the interface language, saves the choice and refreshes everything that is already drawn.
+     * @param {'it'|'en'} newLang
+     */
+    function setLanguage(newLang) {
+        if (!TRANSLATIONS[newLang]) return;
+        lang = newLang;
+        localStorage.setItem(STORAGE_KEYS.lang, lang);
+        applyStaticTranslations();
+        document.querySelectorAll('.day-name').forEach((el, index) => { el.textContent = getWeekdays()[index]; });
+        renderWeek();
+        if (mode === 'month') renderMonth();
+        updateSelectedWeekDisplay();
+        if ($('dmResults').children.length) calculateDates();
+    }
 
     /** @returns {Array[]} Seven empty arrays, one per weekday. */
     function createEmptyWeek() {
@@ -653,6 +873,7 @@
 
     /** Initializes both calendars, restores saved data and handles shared links. */
     window.onload = () => {
+        applyStaticTranslations();
         initCalendar();
         loadMonthlyState();
         setMode(mode);
@@ -755,7 +976,7 @@
     /** Clears the current mode's availability after confirmation. */
     function resetCalendar() {
         if (mode === 'month') return resetMonth();
-        if (!confirm('Vuoi davvero svuotare tutti gli orari impostati per questa settimana?')) return;
+        if (!confirm(t('confirmResetWeek'))) return;
         weeklyEvents = createEmptyWeek();
         renderWeek();
         saveDataAndCheck();
@@ -772,7 +993,7 @@
         $('timeLabels').innerHTML = Array.from({ length: 24 }, (_, hour) => `<div class="time-label">${pad2(hour)}:00</div>`).join('');
 
         weekDates = [];
-        const columns = WEEKDAYS.map((name, index) => {
+        const columns = getWeekdays().map((name, index) => {
             const date = new Date(monday);
             date.setDate(monday.getDate() + index);
             const dateLabel = date.toLocaleDateString('it-IT');
@@ -795,6 +1016,7 @@
             ranges.forEach((range, rangeIndex) => {
                 const block = document.createElement('div');
                 block.className = 'event-block';
+                block.dataset.removeLabel = t('removeBlock');
                 block.style.top = (range.start / 60) * HOUR_HEIGHT_PX + 'px';
                 block.style.height = ((range.end - range.start) / 60) * HOUR_HEIGHT_PX + 'px';
                 block.innerHTML = `<span>${minutesToTime(range.start)}<br>${minutesToTime(range.end)}</span>`;
@@ -819,9 +1041,9 @@
         selectedDayIndex = dayIndex;
         selectedDateKey = null;
         $('dayEventsList').innerHTML = '';
-        $('modalTitle').innerText = `${WEEKDAYS[dayIndex]} ${weekDates[dayIndex]}`;
+        $('modalTitle').innerText = `${getWeekdays()[dayIndex]} ${weekDates[dayIndex]}`;
         resetModalFields();
-        $('multiDayGrid').innerHTML = WEEKDAYS
+        $('multiDayGrid').innerHTML = getWeekdays()
             .map((name, i) => i === dayIndex ? '' : `<label><input type="checkbox" class="multi-day-chk" value="${i}"> ${name}</label>`)
             .join('');
         $('eventModal').classList.remove('hidden');
@@ -889,13 +1111,13 @@
     /** Validates the modal fields and stores the range (weekly, or monthly if a date is selected). */
     function saveEvent() {
         const [startHour, startMinute, endHour, endMinute] = TIME_FIELD_IDS.map(id => parseInt($('val-' + id).value));
-        if ([startHour, startMinute, endHour, endMinute].some(isNaN)) return showError('Inserisci orari validi.');
+        if ([startHour, startMinute, endHour, endMinute].some(isNaN)) return showError(t('enterValidTimes'));
         const invalid = startHour < 0 || startHour > 23 || startMinute < 0 || startMinute > 59 || endHour < 0 || endHour > 24 || endMinute < 0 || endMinute > 59 || (endHour === 24 && endMinute > 0);
-        if (invalid) return showError('Orario non valido.');
+        if (invalid) return showError(t('invalidTime'));
 
         const start = startHour * 60 + startMinute;
         const end = endHour * 60 + endMinute;
-        if (start >= end) return showError("L'ora di fine deve essere successiva all'inizio.");
+        if (start >= end) return showError(t('endAfterStart'));
         if (selectedDateKey) return saveMonthlyEvent(start, end);
 
         const targetDays = [selectedDayIndex, ...Array.from(document.querySelectorAll('.multi-day-chk:checked'), el => parseInt(el.value))];
@@ -950,13 +1172,13 @@
 
     /** Draws the month grid; days with ranges are highlighted, past days are disabled. */
     function renderMonth() {
-        $('monthTitle').innerText = `${MONTH_NAMES[monthRef.m]} ${monthRef.y}`;
+        $('monthTitle').innerText = `${getMonthNames()[monthRef.m]} ${monthRef.y}`;
         const today = new Date();
         const todayKey = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
         const dayCount = new Date(monthRef.y, monthRef.m + 1, 0).getDate();
         const leadingBlanks = getWeekdayIndex(new Date(monthRef.y, monthRef.m, 1));
 
-        let html = WEEKDAYS.map(name => `<div class="month-head">${name.slice(0, 3)}</div>`).join('');
+        let html = getWeekdays().map(name => `<div class="month-head">${name.slice(0, 3)}</div>`).join('');
         html += '<div class="month-cell empty"></div>'.repeat(leadingBlanks);
         for (let day = 1; day <= dayCount; day++) {
             const key = `${getMonthKey()}-${pad2(day)}`;
@@ -971,10 +1193,10 @@
     function openMonthModal(dateKey) {
         selectedDateKey = dateKey;
         const [year, month, day] = dateKey.split('-').map(Number);
-        const weekdayName = WEEKDAYS[getWeekdayIndex(new Date(year, month - 1, day))];
+        const weekdayName = getWeekdays()[getWeekdayIndex(new Date(year, month - 1, day))];
         $('modalTitle').innerText = `${weekdayName} ${day}/${month}/${year}`;
         resetModalFields();
-        $('multiDayGrid').innerHTML = `<label style="grid-column:1/3"><input type="checkbox" id="chkSameWeekday"> Tutti i ${weekdayName.toLowerCase()} del mese</label>`;
+        $('multiDayGrid').innerHTML = `<label style="grid-column:1/3"><input type="checkbox" id="chkSameWeekday"> ${t('everyWeekday', { day: lang === 'it' ? weekdayName.toLowerCase() : weekdayName })}</label>`;
         renderDayList();
         $('eventModal').classList.remove('hidden');
     }
@@ -983,7 +1205,7 @@
     function renderDayList() {
         const ranges = monthlyEvents[selectedDateKey] || [];
         $('dayEventsList').innerHTML = ranges.length
-            ? '<div style="text-align:left;font-size:.85em;color:#aaa;margin:10px 0 6px">FASCE GIÀ INSERITE</div>' + ranges.map((range, i) => `<div class="day-list-item"><b>${minutesToTime(range.start)} - ${minutesToTime(range.end)}</b><span class="x" onclick="removeMonthEvent(${i})">✕ rimuovi</span></div>`).join('')
+            ? '<div style="text-align:left;font-size:.85em;color:#aaa;margin:10px 0 6px">' + t('existingRanges') + '</div>' + ranges.map((range, i) => `<div class="day-list-item"><b>${minutesToTime(range.start)} - ${minutesToTime(range.end)}</b><span class="x" onclick="removeMonthEvent(${i})">${t('removeRange')}</span></div>`).join('')
             : '';
     }
 
@@ -1020,7 +1242,7 @@
 
     /** Clears the displayed month after confirmation. */
     function resetMonth() {
-        if (!confirm('Vuoi davvero svuotare tutte le disponibilità di questo mese?')) return;
+        if (!confirm(t('confirmResetMonth'))) return;
         Object.keys(monthlyEvents).forEach(key => { if (key.startsWith(getMonthKey())) delete monthlyEvents[key]; });
         renderMonth();
         saveDataAndCheck();
@@ -1032,13 +1254,13 @@
     function tryExportCode() {
         if (mode === 'month') {
             if (monthHasEvents()) return proceedExport();
-            return openConfirmModal(`Stai comunicando che <b>non sei disponibile in nessun giorno di ${MONTH_NAMES[monthRef.m]}</b>. Confermi?`);
+            return openConfirmModal(t('absentMonth', { month: getMonthNames()[monthRef.m] }));
         }
-        const emptyDays = WEEKDAYS.filter((_, i) => weeklyEvents[i].length === 0);
+        const emptyDays = getWeekdays().filter((_, i) => weeklyEvents[i].length === 0);
         if (!emptyDays.length) return proceedExport();
         openConfirmModal(emptyDays.length === 7
-            ? 'Stai comunicando che <b>non ci sei per tutta la settimana</b>. Confermi?'
-            : `Stai segnalando un'assenza totale per: <br><br><b style="color:var(--accent);">${emptyDays.join(', ')}</b><br><br>Procedo?`);
+            ? t('absentWeek')
+            : t('absentDays', { days: emptyDays.join(', ') }));
     }
 
     /** Builds the share payload for the current mode. @returns {Object} */
@@ -1077,7 +1299,7 @@
 
     /** Clears the Master's pasted codes after confirmation. */
     function clearDMCodes() {
-        if (!confirm("Svuotare l'area di testo del Master?")) return;
+        if (!confirm(t('confirmClearMaster'))) return;
         $('dmInput').value = '';
         localStorage.setItem(STORAGE_KEYS.masterCodes, '');
         $('dmResults').innerHTML = '';
@@ -1196,29 +1418,29 @@
 
         let html = `<b style="font-size: 1.1em; color: #fff;">${label}</b><span class="expand-icon">▼</span><br><br>`;
         html += full.length
-            ? `<span style="color: var(--success); font-weight:bold;">🔥 GRUPPO COMPLETO:</span> <b style="color: #fff;">${getContinuousBlocks(full).join(', ')}</b>`
-            : `<span style="color: #ff4444;">❌ Nessun orario comune per l'intero gruppo.</span>`;
+            ? `<span style="color: var(--success); font-weight:bold;">${t('fullGroup')}</span> <b style="color: #fff;">${getContinuousBlocks(full).join(', ')}</b>`
+            : `<span style="color: #ff4444;">${t('noCommonTime')}</span>`;
 
         html += '<div class="details-panel">';
         const partialBlocks = getPartialBlocks(partial);
         if (partialBlocks.length) {
             const best = Math.max(...partialBlocks.map(block => block.people.length));
-            html += `<em style="color: #aaa;">Miglior incrocio parziale (${best} giocatori):</em><ul style="margin: 5px 0 15px 0; padding-left: 20px; color: #ccc; font-size: 0.9em;">`;
+            html += `<em style="color: #aaa;">${t('bestPartial', { count: best })}</em><ul style="margin: 5px 0 15px 0; padding-left: 20px; color: #ccc; font-size: 0.9em;">`;
             partialBlocks.filter(block => block.people.length === best).forEach(block => {
                 html += `<li><b style="color: #fff;">${block.time}</b>: ${block.people.map(escapeHtml).join(', ')}</li>`;
             });
             html += '</ul>';
         } else if (!full.length) {
-            html += '<em style="color: #666; font-size: 0.85em;">Nessuna sovrapposizione tra i giocatori.</em><br><br>';
+            html += '<em style="color: #666; font-size: 0.85em;">' + t('noOverlap') + '</em><br><br>';
         }
 
-        html += '<em style="color: #888; font-size: 0.85em; text-transform: uppercase;">Dettaglio PG:</em><ul style="margin: 5px 0; padding-left: 20px; color: #bbb; font-size: 0.9em; list-style-type: square;">';
+        html += '<em style="color: #888; font-size: 0.85em; text-transform: uppercase;">' + t('playerDetail') + '</em><ul style="margin: 5px 0; padding-left: 20px; color: #bbb; font-size: 0.9em; list-style-type: square;">';
         players.forEach(player => {
             const ranges = player.e[slotKey];
             const shift = getTimezoneShift(player, masterTzOffset);
             const text = ranges && ranges.length
                 ? ranges.map(range => { const r = shiftRange(range, shift); return `${minutesToTime(r.start)} - ${minutesToTime(r.end)}`; }).join(', ')
-                : '<span style="color:#ff4444;">Assente</span>';
+                : `<span style="color:#ff4444;">${t('absent')}</span>`;
             html += `<li><b style="color: #ddd;">${escapeHtml(player.n)}</b>: <span>${text}</span></li>`;
         });
         card.innerHTML = html + '</ul></div>';
@@ -1245,7 +1467,7 @@
         summary.style.cursor = 'default';
         const chipLabel = key => {
             const [y, m, d] = key.split('-').map(Number);
-            return `${WEEKDAYS[getWeekdayIndex(new Date(y, m - 1, d))].slice(0, 3)} ${d}`;
+            return `${getWeekdays()[getWeekdayIndex(new Date(y, m - 1, d))].slice(0, 3)} ${d}`;
         };
         const groups = new Map();
         fullDays.forEach(day => {
@@ -1255,13 +1477,13 @@
         });
         const sortedGroups = [...groups.values()].sort((a, b) => b.minutes - a.minutes || b.days.length - a.days.length);
         summary.innerHTML = fullDays.length
-            ? `<b style="color:var(--success)">🔥 Giorni con gruppo completo (${fullDays.length}):</b>` + sortedGroups.map(group => `<div class="slot-group"><div><b style="color:#fff">${group.blocks}</b> <span style="color:#888;font-size:.85em">· ${group.days.length} ${group.days.length === 1 ? 'giorno' : 'giorni'}</span></div><div class="chip-row">${group.days.map(key => `<span class="day-chip" data-key="${key}">${chipLabel(key)}</span>`).join('')}</div></div>`).join('')
-            : '<span style="color:#ff4444">❌ Nessun giorno del mese in cui tutto il gruppo è libero.</span>'
-              + (best && best.availability.maxCount >= 2 ? `<br><span style="color:#ccc">Miglior alternativa: <b style="color:#fff">${best.label}</b> (${best.availability.maxCount}/${total} giocatori)</span>` : '');
+            ? `<b style="color:var(--success)">${t('fullGroupDays', { count: fullDays.length })}</b>` + sortedGroups.map(group => `<div class="slot-group"><div><b style="color:#fff">${group.blocks}</b> <span style="color:#888;font-size:.85em">· ${group.days.length} ${t(group.days.length === 1 ? 'dayOne' : 'dayMany')}</span></div><div class="chip-row">${group.days.map(key => `<span class="day-chip" data-key="${key}">${chipLabel(key)}</span>`).join('')}</div></div>`).join('')
+            : `<span style="color:#ff4444">${t('noFullDay')}</span>`
+              + (best && best.availability.maxCount >= 2 ? `<br><span style="color:#ccc">${t('bestAlternative', { label: best.label, count: best.availability.maxCount, total })}</span>` : '');
         container.appendChild(summary);
 
         const [year, month] = players[0].m.split('-').map(Number);
-        let gridHtml = WEEKDAYS.map(name => `<div class="month-head">${name.slice(0, 3)}</div>`).join('');
+        let gridHtml = getWeekdays().map(name => `<div class="month-head">${name.slice(0, 3)}</div>`).join('');
         gridHtml += '<div class="month-cell empty"></div>'.repeat(getWeekdayIndex(new Date(year, month - 1, 1)));
         days.forEach(({ key, availability }) => {
             const { maxCount, full } = availability;
@@ -1275,7 +1497,7 @@
 
         const legend = document.createElement('p');
         legend.className = 'heat-legend';
-        legend.textContent = 'Ogni giorno mostra i giocatori liberi nello stesso momento sul totale. Bordo verde = gruppo completo. Tocca un giorno per i dettagli.';
+        legend.textContent = t('heatLegend');
 
         const detail = document.createElement('div');
         const showDay = key => {
@@ -1306,19 +1528,19 @@
     /** Decodes the pasted codes, validates them and renders the overlap results. */
     function calculateDates() {
         const lines = $('dmInput').value.trim().split('\n').filter(Boolean);
-        if (!lines.length) return showError('Inserisci almeno un codice generato dai giocatori.');
+        if (!lines.length) return showError(t('enterAtLeastOneCode'));
 
         let players;
         try { players = lines.map(decodeShareCode); }
-        catch (error) { return showError('Uno o più codici inseriti non sono validi o sono danneggiati.'); }
+        catch (error) { return showError(t('invalidCodes')); }
 
         const isMonthly = players.some(player => player.m);
         if (isMonthly && !players.every(player => player.m && player.m === players[0].m)) {
-            return showError('Attenzione: stai mescolando codici mensili e settimanali, oppure mesi diversi!');
+            return showError(t('mixedCodes'));
         }
         if (!isMonthly) {
             const firstWeek = players[0].d.join(',');
-            if (!players.every(player => player.d.join(',') === firstWeek)) return showError('Attenzione: Stai incrociando codici che appartengono a settimane diverse!');
+            if (!players.every(player => player.d.join(',') === firstWeek)) return showError(t('differentWeeks'));
         }
 
         let slotKeys = [0, 1, 2, 3, 4, 5, 6];
@@ -1327,13 +1549,13 @@
             slotKeys = Array.from({ length: new Date(year, month, 0).getDate() }, (_, i) => `${players[0].m}-${pad2(i + 1)}`);
         }
         const getLabel = key => {
-            if (!isMonthly) return `${WEEKDAYS[key]} ${escapeHtml(players[0].d[key])}`;
+            if (!isMonthly) return `${getWeekdays()[key]} ${escapeHtml(players[0].d[key])}`;
             const [year, month, day] = key.split('-').map(Number);
-            return `${WEEKDAYS[getWeekdayIndex(new Date(year, month - 1, day))]} ${pad2(day)}/${pad2(month)}/${year}`;
+            return `${getWeekdays()[getWeekdayIndex(new Date(year, month - 1, day))]} ${pad2(day)}/${pad2(month)}/${year}`;
         };
 
         const results = $('dmResults');
-        results.innerHTML = '<h3 style="color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 20px;">Risultati Incrocio Sessione</h3>';
+        results.innerHTML = '<h3 style="color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 20px;">' + t('resultsTitle') + '</h3>';
         const masterTzOffset = new Date().getTimezoneOffset();
         if (isMonthly) renderMonthlyResults(results, players, slotKeys, getLabel, masterTzOffset);
         else slotKeys.forEach(key => results.appendChild(buildSlotCard(getLabel(key), players, key, getSlotAvailability(players, key, masterTzOffset), masterTzOffset)));
@@ -1343,9 +1565,9 @@
         exportBlock.innerHTML = `
             <button id="btn-export-img" onclick="exportDMImage()" class="btn-success" style="margin: 0 auto;">
                 <svg style="width:18px; height:18px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                Esporta Risultati come Immagine
+                ${t('exportImage')}
             </button>
-            <p id="exportStatusText" style="color:var(--success); font-size: 0.8em; margin-top:10px; display:none; font-weight:bold;">Immagine scaricata!</p>`;
+            <p id="exportStatusText" style="color:var(--success); font-size: 0.8em; margin-top:10px; display:none; font-weight:bold;">${t('imageDownloaded')}</p>`;
         results.appendChild(exportBlock);
     }
 
@@ -1364,7 +1586,7 @@
         html2canvas(target, { backgroundColor: '#121212', scale: 2 })
             .then(canvas => {
                 const link = document.createElement('a');
-                link.download = 'D&D_Orari_Sessione.png';
+                link.download = t('imageFileName');
                 link.href = canvas.toDataURL('image/png');
                 link.click();
                 status.style.display = 'block';
@@ -1404,7 +1626,7 @@
         const dateValue = $('targetWeekDate').value;
         if (!dateValue) { $('selectedWeekDisplay').innerText = ''; return; }
         const { monday, sunday } = getWeekRange(dateValue);
-        $('selectedWeekDisplay').innerText = `Calcolato: ${monday.toLocaleDateString('it-IT')} - ${sunday.toLocaleDateString('it-IT')}`;
+        $('selectedWeekDisplay').innerText = t('calculated', { from: monday.toLocaleDateString('it-IT'), to: sunday.toLocaleDateString('it-IT') });
     }
 
     /** Sets the converter's date to today. */
@@ -1417,18 +1639,18 @@
     /** Re-targets an old weekly code to the chosen week and shows the new code. */
     function convertCodeWeek() {
         const oldCode = $('convertOldCode').value.trim();
-        if (!oldCode) return showError('Incolla un codice da convertire.');
+        if (!oldCode) return showError(t('pasteCodeToConvert'));
         const dateValue = $('targetWeekDate').value;
-        if (!dateValue) return showError('Seleziona una data per impostare la nuova settimana.');
+        if (!dateValue) return showError(t('selectDateForWeek'));
 
         try {
             const data = decodeShareCode(oldCode);
-            if (data.m) return showError('Il convertitore funziona solo con i codici settimanali.');
+            if (data.m) return showError(t('convertOnlyWeekly'));
             data.d = getWeekRange(dateValue).dates;
             $('convertedCodeText').innerText = encodeShareCode(data);
             $('converterResultBlock').classList.remove('hidden');
         } catch (error) {
-            showError('Errore durante decodifica. Verifica che il codice sia integro.');
+            showError(t('decodeError'));
         }
     }
     </script>
